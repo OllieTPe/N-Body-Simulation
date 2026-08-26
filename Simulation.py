@@ -19,10 +19,10 @@ delta_t = 0.01
 mass_vector = [30,60]
 
 #The initial position vectors of our two massive objects
-position_vector = [np.array([1,0]), np.array([-1,0])]
+position_vector = [np.array([1,0,0]), np.array([-1,0,0])]
 
 #The initial velocity vectors of our two massive objects
-velocity_vector = [np.array([0,3]), np.array([0,-3])]
+velocity_vector = [np.array([0,3,0]), np.array([0,-3,0])]
 
 
 
@@ -84,13 +84,13 @@ def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
 
 def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    relative_energy_error = []
+    energy_error = []
     
     k_0 = sum(mass_vector[i] * np.linalg.norm(velocity_vector[i])**2 / 2 for i in range(len(mass_vector)))
     v_0 = sum(-1* G * mass_vector[i] * mass_vector[j] / np.linalg.norm(position_vector[j] - position_vector[i]) for i in range(len(mass_vector)) for j in range(len(mass_vector)) if i < j)
     E_0 = k_0 + v_0
     
-    relative_energy_error.append(np.float64(0))
+    energy_error.append(np.float64(0))
     
     for i in range(number_of_iterations):
         position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
@@ -99,15 +99,15 @@ def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector
         potential_energy = sum(-1* G * mass_vector[i] * mass_vector[j] / np.linalg.norm(position_vector[j] - position_vector[i]) for i in range(len(mass_vector)) for j in range(len(mass_vector)) if i < j)
         
         if np.isclose(E_0, 0, 1e-12):
-            relative_energy_error.append(abs(kinetic_energy + potential_energy))
+            energy_error.append(abs(kinetic_energy + potential_energy))
             plt.ylabel("Absolute Energy Error")
         else:
-            relative_energy_error.append((kinetic_energy + potential_energy - E_0) / abs(E_0))
+            energy_error.append((kinetic_energy + potential_energy - E_0) / abs(E_0))
             plt.ylabel("Relative Energy Error")
 
-    time = np.arange(len(relative_energy_error)) * delta_t
+    time = np.arange(len(energy_error)) * delta_t
     
-    plt.plot(time, relative_energy_error)
+    plt.plot(time, energy_error)
 
     plt.xlabel("Time")
     plt.title("Energy Conservation Using The Forward Euler Method")
@@ -116,11 +116,11 @@ def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector
 
 def conservation_of_linear_momentum(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    relative_linear_momentum_error = []
+    linear_momentum_error = []
     
     P_0 = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
 
-    relative_linear_momentum_error.append(np.float64(0))
+    linear_momentum_error.append(np.float64(0))
     
     for i in range(number_of_iterations):
         position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
@@ -128,23 +128,52 @@ def conservation_of_linear_momentum(method, number_of_iterations, G, delta_t, ma
         linear_momentum = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
         
         if np.isclose(np.linalg.norm(P_0), 0, atol = 1e-12):
-            relative_linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0))
+            linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0))
             plt.ylabel("Absolute Linear Momentum Error")
         else:
-            relative_linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0) / np.linalg.norm(P_0))
+            linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0) / np.linalg.norm(P_0))
             plt.ylabel("Relative Linear Momentum Error")
     
-    time = np.arange(len(relative_linear_momentum_error)) * delta_t
+    time = np.arange(len(linear_momentum_error)) * delta_t
     
-    plt.plot(time, relative_linear_momentum_error)
+    plt.plot(time, linear_momentum_error)
     
     plt.xlabel("Time")
     plt.title("Linear Momentum Conservation Using The Forward Euler Method")
 
     plt.show()
     
-conservation_of_linear_momentum(forward_euler_method, 5000, G, 0.0001, mass_vector, position_vector, velocity_vector)
-
+def conservation_of_angular_momentum(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    angular_momentum_error = []
+    
+    L_0 = sum(np.cross(position_vector[i], mass_vector[i] * velocity_vector[i]) for i in range(len(mass_vector)))
+    
+    angular_momentum_error.append(np.float64(0))
+    
+    for i in range(number_of_iterations):
+        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        angular_momentum = sum(np.cross(position_vector[i], mass_vector[i] * velocity_vector[i]) for i in range(len(mass_vector)))
+        
+        if np.isclose(np.linalg.norm(L_0), 0, atol = 1e-12):
+            angular_momentum_error.append(np.linalg.norm(angular_momentum - L_0))
+            plt.ylabel("Absolute Angular Momentum Error")
+        else:
+            angular_momentum_error.append(np.linalg.norm(angular_momentum - L_0) / np.linalg.norm(L_0))
+            plt.ylabel("Relative Angular Momentum Error")
+        
+    time = np.arange(len(angular_momentum_error)) * delta_t
+    
+    plt.plot(time, angular_momentum_error)
+    
+    plt.xlabel("Time")
+    plt.title("Angular Momentum Conservation Using The Forward Euler Method")
+    
+    plt.show()
+    
+conservation_of_angular_momentum(forward_euler_method, 10000, G, 0.0001, mass_vector, position_vector, velocity_vector)
+    
 
 
 
