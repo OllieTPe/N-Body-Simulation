@@ -7,6 +7,7 @@ Created on Mon Aug 24 18:03:24 2026
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 #The gravitational constant
 G = 1
@@ -44,7 +45,7 @@ def forward_euler_method(G,delta_t,mass_vector,dis_vector,vel_vector):
 trajectory1 = []
 trajectory2 = []
 
-for i in range(600):
+for i in range(1000):
     dis_vector, vel_vector = forward_euler_method(G, delta_t, mass_vector, dis_vector, vel_vector)
     trajectory1.append(dis_vector[0].copy())
     trajectory2.append(dis_vector[1].copy())
@@ -52,8 +53,31 @@ for i in range(600):
 trajectory1 = np.array(trajectory1)
 trajectory2 = np.array(trajectory2)
 
-plt.plot(trajectory1[:,0],trajectory1[:,1])
-plt.plot(trajectory2[:,0],trajectory2[:,1])
+fig, ax = plt.subplots()
 
-plt.axis("equal")
+ax.set_xlim(min(trajectory1[:,0].min(), trajectory2[:,0].min()) - 0.5, max(trajectory1[:,0].max(),trajectory2[:,0].max()) + 0.5)
+ax.set_ylim(min(trajectory1[:,1].min(), trajectory2[:,1].min()) - 0.5, max(trajectory1[:,1].max(),trajectory2[:,1].max()) + 0.5)
+
+ax.set_aspect("equal")
+
+body1, = ax.plot([], [], "o")
+body2, = ax.plot([], [], "o")
+
+def update(frame):
+    
+    body1.set_data([trajectory1[frame,0]], [trajectory1[frame,1]])
+    body2.set_data([trajectory2[frame,0]], [trajectory2[frame,1]])
+    
+    return body1, body2
+
+animation = FuncAnimation(fig, update, frames = range(0, len(trajectory1), 2), interval = 20)
+
 plt.show()
+
+
+
+
+
+
+
+
