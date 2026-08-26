@@ -33,13 +33,13 @@ def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vect
     abs_displacement = np.linalg.norm(position_vector[1] - position_vector[0])
     
     #The calculations for the acceleration vectors for our two massive objects
-    acc_vector = [G * mass_vector[0] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G*mass_vector[1] * (position_vector[0] - position_vector[1]) / abs_displacement**3]
+    acceleration_vector = [G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G*mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3]
     
     #Using the finite difference method to find the position vectors after some time step
     position_vector = [position_vector[0] + velocity_vector[0] * delta_t, position_vector[1] + velocity_vector[1] * delta_t]
     
     #Using the finite difference method to find the velocity vectors after some time step
-    velocity_vector = [velocity_vector[0] + acc_vector[0] * delta_t, velocity_vector[1] + acc_vector[1] * delta_t]
+    velocity_vector = [velocity_vector[0] + acceleration_vector[0] * delta_t, velocity_vector[1] + acceleration_vector[1] * delta_t]
 
     return position_vector, velocity_vector
 
@@ -79,7 +79,7 @@ def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     return animation
 
-animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
+#animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
 
 
 def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
@@ -97,32 +97,53 @@ def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector
         
         kinetic_energy = sum(mass_vector[i] * np.linalg.norm(velocity_vector[i])**2 / 2 for i in range(len(mass_vector)))
         potential_energy = sum(-1* G * mass_vector[i] * mass_vector[j] / np.linalg.norm(position_vector[j] - position_vector[i]) for i in range(len(mass_vector)) for j in range(len(mass_vector)) if i < j)
-
-        relative_energy_error.append((kinetic_energy + potential_energy - E_0) / abs(E_0))
+        
+        if np.isclose(E_0, 0, 1e-12):
+            relative_energy_error.append(abs(kinetic_energy + potential_energy))
+            plt.ylabel("Absolute Energy Error")
+        else:
+            relative_energy_error.append((kinetic_energy + potential_energy - E_0) / abs(E_0))
+            plt.ylabel("Relative Energy Error")
 
     time = np.arange(len(relative_energy_error)) * delta_t
     
     plt.plot(time, relative_energy_error)
 
     plt.xlabel("Time")
-    plt.ylabel("Relative Energy Error")
     plt.title("Energy Conservation Using The Forward Euler Method")
 
     plt.show()
 
-print(conservation_of_energy(forward_euler_method, 500, G, 0.001, mass_vector, position_vector, velocity_vector))
+def conservation_of_linear_momentum(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    relative_linear_momentum_error = []
+    
+    P_0 = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
 
+    relative_linear_momentum_error.append(np.float64(0))
+    
+    for i in range(number_of_iterations):
+        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        linear_momentum = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
+        
+        if np.isclose(np.linalg.norm(P_0), 0, atol = 1e-12):
+            relative_linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0))
+            plt.ylabel("Absolute Linear Momentum Error")
+        else:
+            relative_linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0) / np.linalg.norm(P_0))
+            plt.ylabel("Relative Linear Momentum Error")
+    
+    time = np.arange(len(relative_linear_momentum_error)) * delta_t
+    
+    plt.plot(time, relative_linear_momentum_error)
+    
+    plt.xlabel("Time")
+    plt.title("Linear Momentum Conservation Using The Forward Euler Method")
 
-
-
-
-
-
-
-
-
-
-
+    plt.show()
+    
+conservation_of_linear_momentum(forward_euler_method, 5000, G, 0.0001, mass_vector, position_vector, velocity_vector)
 
 
 
