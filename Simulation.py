@@ -9,47 +9,86 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-#The gravitational constant
 G = 1
 
-#The time between each update
-delta_t = 0.01
+delta_t = 0.001
 
-#The masses of the massive objects
-mass_vector = [30,60]
+mass_vector = np.array([[30],[60]])
 
-#The initial position vectors of our two massive objects
-position_vector = [np.array([1,0,0]), np.array([-1,0,0])]
+position_vector = np.array([[1,0,0], [-1,0,0]])
 
-#The initial velocity vectors of our two massive objects
-velocity_vector = [np.array([0,3,0]), np.array([0,-3,0])]
+velocity_vector = np.array([[0,3,0], [0,-3,0]])
 
 
-
-#Function that updates the position and velocity vectors
-def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector):
-
-    #Calculates the absolute position between massive objects
+def acceleration(G, mass_vector, position_vector):
+    
     abs_displacement = np.linalg.norm(position_vector[1] - position_vector[0])
     
-    #The calculations for the acceleration vectors for our two massive objects
-    acceleration_vector = [G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G*mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3]
+    acceleration_vector = np.array([G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G * mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3])
     
-    #Using the finite difference method to find the position vectors after some time step
-    position_vector = [position_vector[0] + velocity_vector[0] * delta_t, position_vector[1] + velocity_vector[1] * delta_t]
+    return acceleration_vector
     
-    #Using the finite difference method to find the velocity vectors after some time step
-    velocity_vector = [velocity_vector[0] + acceleration_vector[0] * delta_t, velocity_vector[1] + acceleration_vector[1] * delta_t]
+
+def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    abs_displacement = np.linalg.norm(position_vector[1] - position_vector[0])
+    
+    acceleration_vector = np.array([G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G * mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3])
+    
+    position_vector = position_vector + velocity_vector * delta_t
+    
+    velocity_vector = velocity_vector + acceleration_vector * delta_t
+    
+    return position_vector, velocity_vector
+
+def runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    k_1 = np.array([
+        velocity_vector, 
+        acceleration(G,
+                     mass_vector,
+                     position_vector
+                     )
+        ])
+    
+    k_2 = np.array([
+        velocity_vector + delta_t / 2 * k_1[1],
+        acceleration(G,
+                     mass_vector,
+                     position_vector + delta_t / 2 * k_1[0]
+                     )
+        ])
+
+    k_3 = np.array([
+        velocity_vector + delta_t / 2 * k_2[1],
+        acceleration(G,
+                     mass_vector,
+                     position_vector + delta_t / 2 * k_2[0]
+                     )
+        ])
+    
+    k_4 = np.array([
+        velocity_vector + delta_t * k_3[1],
+        acceleration(G,
+                     mass_vector,
+                     position_vector + delta_t * k_3[0]
+                     )
+        ])
+    
+
+    position_vector = position_vector + delta_t / 6 * (k_1 + 2 * k_2 + 2 * k_3 + k_4)[0]
+    velocity_vector = velocity_vector + delta_t / 6 * (k_1 + 2 * k_2 + 2 * k_3 + k_4)[1]
 
     return position_vector, velocity_vector
 
-#The following code stores the values of each massive objects trajectory and plots the path by both objects
+
+
 def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
     trajectory1 = []
     trajectory2 = []
 
     for i in range(1000):
-        position_vector, velocity_vector = forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        position_vector, velocity_vector = runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector)
         trajectory1.append(position_vector[0].copy())
         trajectory2.append(position_vector[1].copy())
 
@@ -167,15 +206,19 @@ def conservation_of_angular_momentum(method, number_of_iterations, G, delta_t, m
     
     plt.plot(time, angular_momentum_error)
     
+    if method == forward_euler_method:
+        title = "Forward Euler Method"
+    elif method == runge_kutta_4_method:
+        title = "Runge Kutta Method"
+    
     plt.xlabel("Time")
-    plt.title("Angular Momentum Conservation Using The Forward Euler Method")
+    plt.title(f"Angular Momentum Conservation Using The {title}")
     
     plt.show()
     
-conservation_of_angular_momentum(forward_euler_method, 10000, G, 0.0001, mass_vector, position_vector, velocity_vector)
-    
-
-
+conservation_of_energy(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+conservation_of_linear_momentum(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+conservation_of_angular_momentum(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 
 
