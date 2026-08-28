@@ -81,6 +81,26 @@ def runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vect
 
     return position_vector, velocity_vector
 
+def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    acceleration_vector = acceleration(G,
+                                       mass_vector,
+                                       position_vector
+                                       )
+    
+    velocity_vector = velocity_vector + delta_t / 2 * acceleration_vector
+    
+    position_vector = position_vector + delta_t * velocity_vector
+
+    acceleration_vector = acceleration(G,
+                                       mass_vector,
+                                       position_vector
+                                       )
+    
+    velocity_vector = velocity_vector + delta_t / 2 * acceleration_vector
+    
+    return position_vector, velocity_vector
+
 
 
 def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
@@ -210,15 +230,19 @@ def conservation_of_angular_momentum(method, number_of_iterations, G, delta_t, m
         title = "Forward Euler Method"
     elif method == runge_kutta_4_method:
         title = "Runge Kutta Method"
+    else:
+        title = "Leapfrog Method"
     
     plt.xlabel("Time")
     plt.title(f"Angular Momentum Conservation Using The {title}")
     
     plt.show()
     
-conservation_of_energy(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
-conservation_of_linear_momentum(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
-conservation_of_angular_momentum(runge_kutta_4_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+
+
+#conservation_of_energy(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+#conservation_of_linear_momentum(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+#conservation_of_angular_momentum(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 
 
