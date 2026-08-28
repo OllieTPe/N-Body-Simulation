@@ -11,29 +11,39 @@ from matplotlib.animation import FuncAnimation
 
 G = 1
 
-delta_t = 0.001
+delta_t = 0.01
 
-mass_vector = np.array([[30],[60]])
+mass_vector = np.array([1,1,1])
 
-position_vector = np.array([[1,0,0], [-1,0,0]])
+position_vector = np.array([[-0.97000436,0.24308753,0.0],
+                            [0.97000436,-0.24308753,0.0],
+                            [0.0,0.0,0.0]
+                            ])
 
-velocity_vector = np.array([[0,3,0], [0,-3,0]])
+velocity_vector = np.array([[0.466203685,0.432365730,0.0],
+                            [0.466203685,0.432365730,0.0],
+                            [-0.932407370,-0.864731460,0.0]
+                            ])
+
+
 
 
 def acceleration(G, mass_vector, position_vector):
     
-    abs_displacement = np.linalg.norm(position_vector[1] - position_vector[0])
+    acceleration_vector = np.zeros((len(mass_vector), 3))
     
-    acceleration_vector = np.array([G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G * mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3])
+    for i in range(len(mass_vector)):
+        for j in range(len(mass_vector)):
+            if i != j:
+                acceleration_vector[i] += G * mass_vector[j] * (position_vector[j] - position_vector[i]) / np.linalg.norm(position_vector[j] - position_vector[i])**3
     
     return acceleration_vector
-    
 
 def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    abs_displacement = np.linalg.norm(position_vector[1] - position_vector[0])
-    
-    acceleration_vector = np.array([G * mass_vector[1] * (position_vector[1] - position_vector[0]) / abs_displacement**3, G * mass_vector[0] * (position_vector[0] - position_vector[1]) / abs_displacement**3])
+    acceleration_vector =  acceleration(G,
+                                        mass_vector,
+                                        position_vector)
     
     position_vector = position_vector + velocity_vector * delta_t
     
@@ -104,41 +114,52 @@ def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
 
 
 def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
-    trajectory1 = []
-    trajectory2 = []
+    
+    trajectory = []
 
-    for i in range(1000):
+    for i in range(10000):
         position_vector, velocity_vector = runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector)
-        trajectory1.append(position_vector[0].copy())
-        trajectory2.append(position_vector[1].copy())
+        trajectory.append(position_vector.copy())
 
-    trajectory1 = np.array(trajectory1)
-    trajectory2 = np.array(trajectory2)
+    trajectory = np.array(trajectory)
 
     fig, ax = plt.subplots()
 
-    ax.set_xlim(min(trajectory1[:,0].min(), trajectory2[:,0].min()) - 0.5, max(trajectory1[:,0].max(),trajectory2[:,0].max()) + 0.5)
-    ax.set_ylim(min(trajectory1[:,1].min(), trajectory2[:,1].min()) - 0.5, max(trajectory1[:,1].max(),trajectory2[:,1].max()) + 0.5)
-
+    ax.set_xlim(
+        trajectory[:, :, 0].min() - 0.5,
+        trajectory[:, :, 0].max() + 0.5
+        )    
+    
+    ax.set_ylim(
+        trajectory[:, :, 1].min() - 0.5,
+        trajectory[:, :, 1].max() + 0.5
+        )
+    
     ax.set_aspect("equal")
 
-    body1, = ax.plot([], [], "o")
-    body2, = ax.plot([], [], "o")
+    bodies = []
+    
+    for i in range(len(mass_vector)):
+        body, = ax.plot([], [], "o")
+        bodies.append(body)
 
     def update(frame):
     
-        body1.set_data([trajectory1[frame,0]], [trajectory1[frame,1]])
-        body2.set_data([trajectory2[frame,0]], [trajectory2[frame,1]])
-    
-        return body1, body2
+        for i in range(len(mass_vector)):
+            bodies[i].set_data(
+                [trajectory[frame, i, 0]],
+                [trajectory[frame, i, 1]]
+                )
+            
+        return bodies
 
-    animation = FuncAnimation(fig, update, frames = range(0, len(trajectory1), 2), interval = 20)
+    animation = FuncAnimation(fig, update, frames = range(0, len(trajectory), 5), interval = 20)
 
     plt.show()
     
     return animation
 
-#animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
+animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
 
 
 def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
