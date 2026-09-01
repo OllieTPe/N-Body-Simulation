@@ -344,45 +344,52 @@ def conservation_of_angular_momentum(method, number_of_iterations, iterations_be
             
     return time, angular_momentum_error
 
-
-def energy_conservation_comparison(number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
+def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    methods = [runge_kutta_4_method]
+    if conserved_quantity == conservation_of_energy:
+        conserved_quantity_name = "Energy"
+    elif conserved_quantity == conservation_of_linear_momentum:
+        conserved_quantity_name = "Linear Momentum"
+    else:
+        conserved_quantity_name = "Angular Momentum"
     
-    names = ["Runge Kutta"]
-        
-    for method, name in zip(methods, names):
-        
-        time, energy_error = conservation_of_energy(method,
-                                                    number_of_iterations,
-                                                    iterations_between_updates,
-                                                    G,
-                                                    delta_t,
-                                                    mass_vector,
-                                                    position_vector,
-                                                    velocity_vector
-                                                    )
-
-        plt.plot(time, np.abs(energy_error), label = name)
+    fig, axes = plt.subplots(3, 3, figsize = (9,6), sharex = True, sharey = "row", constrained_layout = True)
     
-    plt.xlabel("Time")
-    plt.ylabel("Absolute Relative Energy Error")
-    plt.yscale("log")
-    plt.title(f"Energy Conservation with Δt = {delta_t}")
-    plt.legend()
-    plt.grid()
+    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    
+    method_names = ["Forward Euler", "Runge Kutta", "Leapfrog"]
+    
+    delta_t_times = [0.1, 0.05, 0.01]
+    
+    for row, (method, method_name) in enumerate(zip(methods, method_names)):
+        for column, delta_t in enumerate(delta_t_times):
+            
+            number_of_iterations = int(total_time / delta_t)
+            iterations_between_updates = int(measurement_interval / delta_t)
+            
+            time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
+            
+            ax = axes[row, column]
+            
+            ax.plot(time, abs(conserved_quantity_error), color = "red")
+            ax.set_yscale("log")
+            ax.grid(which = "both", alpha = 0.3)
+            
+            if row == 0:
+                ax.set_title(f"Δt = {delta_t}")
+            
+            if column == 0:
+                ax.set_ylabel(f"{method_name} Error")
+                
+            if row == 2:
+                ax.set_xlabel("Time")
+            
+    fig.suptitle(f"{conserved_quantity_name} Conservation Comparison", fontsize = 16)        
+    
+    
     plt.show()
 
-energy_conservation_comparison(250000, 20, G, 0.05, mass_vector, position_vector, velocity_vector)
 
-
-
-
-
-
-
-
-
-
+plot_graphs(conservation_of_energy, 100000, 1, G, mass_vector, position_vector, velocity_vector)
 
 
