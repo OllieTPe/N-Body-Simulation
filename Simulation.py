@@ -8,12 +8,13 @@ Created on Mon Aug 24 18:03:24 2026
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from numba import njit
 
 G = 1
 
 delta_t = 0.01
 
-mass_vector = np.array([1,1,1])
+mass_vector = np.array([1.0,1.0,1.0])
 
 position_vector = np.array([[-0.97000436,0.24308753,0.0],
                             [0.97000436,-0.24308753,0.0],
@@ -27,7 +28,7 @@ velocity_vector = np.array([[0.466203685,0.432365730,0.0],
 
 
 
-
+@njit
 def acceleration(G, mass_vector, position_vector):
     
     acceleration_vector = np.zeros((len(mass_vector), 3))
@@ -35,10 +36,13 @@ def acceleration(G, mass_vector, position_vector):
     for i in range(len(mass_vector)):
         for j in range(len(mass_vector)):
             if i != j:
-                acceleration_vector[i] += G * mass_vector[j] * (position_vector[j] - position_vector[i]) / np.linalg.norm(position_vector[j] - position_vector[i])**3
+                displacement = position_vector[j] - position_vector[i]
+                displacement_squared = np.dot(displacement,displacement)
+                acceleration_vector[i] += G * mass_vector[j] * (displacement) / displacement_squared**1.5
     
     return acceleration_vector
 
+@njit
 def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     acceleration_vector =  acceleration(G,
@@ -51,46 +55,41 @@ def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vect
     
     return position_vector, velocity_vector
 
+@njit
 def runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    k_1 = np.array([
-        velocity_vector, 
-        acceleration(G,
-                     mass_vector,
-                     position_vector
-                     )
-        ])
-    
-    k_2 = np.array([
-        velocity_vector + delta_t / 2 * k_1[1],
-        acceleration(G,
-                     mass_vector,
-                     position_vector + delta_t / 2 * k_1[0]
-                     )
-        ])
+    k_1_velocity = velocity_vector
+    k_1_acceleration = acceleration(G,
+                                    mass_vector,
+                                    position_vector
+                                    )
 
-    k_3 = np.array([
-        velocity_vector + delta_t / 2 * k_2[1],
-        acceleration(G,
-                     mass_vector,
-                     position_vector + delta_t / 2 * k_2[0]
-                     )
-        ])
     
-    k_4 = np.array([
-        velocity_vector + delta_t * k_3[1],
-        acceleration(G,
-                     mass_vector,
-                     position_vector + delta_t * k_3[0]
-                     )
-        ])
-    
+    k_2_velocity = velocity_vector + delta_t / 2 * k_1_acceleration
+    k_2_acceleration = acceleration(G,
+                                    mass_vector,
+                                    position_vector + delta_t / 2 * k_1_velocity
+                                    )
 
-    position_vector = position_vector + delta_t / 6 * (k_1 + 2 * k_2 + 2 * k_3 + k_4)[0]
-    velocity_vector = velocity_vector + delta_t / 6 * (k_1 + 2 * k_2 + 2 * k_3 + k_4)[1]
+
+    k_3_velocity = velocity_vector + delta_t / 2 * k_2_acceleration
+    k_3_acceleration = acceleration(G,
+                                    mass_vector,
+                                    position_vector + delta_t / 2 * k_2_velocity
+                                    )
+    
+    k_4_velocity = velocity_vector + delta_t * k_3_acceleration
+    k_4_acceleration = acceleration(G,
+                                    mass_vector,
+                                    position_vector + delta_t * k_3_velocity
+                                    )
+    
+    position_vector = position_vector + delta_t / 6 * (k_1_velocity + 2 * k_2_velocity + 2 * k_3_velocity + k_4_velocity)
+    velocity_vector = velocity_vector + delta_t / 6 * (k_1_acceleration + 2 * k_2_acceleration + 2 * k_3_acceleration + k_4_acceleration)
 
     return position_vector, velocity_vector
 
+@njit
 def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     acceleration_vector = acceleration(G,
@@ -159,111 +158,231 @@ def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     return animation
 
-animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
+#animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
 
+@njit
+def total_energy(G, mass_vector, position_vector, velocity_vector):
+    
+    kinetic_energy = 0.0
+    potential_energy = 0.0
+    
+    for i in range(len(mass_vector)):
+        
+        kinetic_energy += (mass_vector[i] * np.dot(velocity_vector[i], velocity_vector[i]) / 2)
 
-def conservation_of_energy(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    for i in range(len(mass_vector)):
+        for j in range(i + 1, len(mass_vector)):
+            
+            displacement = position_vector[j] - position_vector[i]
+            distance = np.sqrt(np.dot(displacement, displacement))
+            
+            potential_energy -= G * mass_vector[i] * mass_vector[j] / distance
+            
+    return kinetic_energy + potential_energy
+
+@njit
+def total_linear_momentum(mass_vector, position_vector, velocity_vector):
     
-    energy_error = []
+    linear_momentum = np.zeros(3)
     
-    k_0 = sum(mass_vector[i] * np.linalg.norm(velocity_vector[i])**2 / 2 for i in range(len(mass_vector)))
-    v_0 = sum(-1* G * mass_vector[i] * mass_vector[j] / np.linalg.norm(position_vector[j] - position_vector[i]) for i in range(len(mass_vector)) for j in range(len(mass_vector)) if i < j)
-    E_0 = k_0 + v_0
+    for i in range(len(mass_vector)):
+        
+        linear_momentum += mass_vector[i] * velocity_vector[i]
+        
+    return linear_momentum
+
+@njit
+def total_angular_momentum(mass_vector, position_vector, velocity_vector):
     
-    energy_error.append(np.float64(0))
+    angular_momentum = np.zeros(3)
+    
+    for i in range(len(mass_vector)):
+        
+        angular_momentum += np.cross(position_vector[i], mass_vector[i] * velocity_vector[i])
+        
+    return angular_momentum
+
+@njit
+def conservation_of_energy(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    number_of_measurements = number_of_iterations // iterations_between_updates + 1
+    
+    energy_error = np.empty(number_of_measurements)
+    time = np.empty(number_of_measurements)
+    
+    energy_error[0] = 0.0
+    time[0] = 0.0
+    
+    E_0 = total_energy(G,
+                       mass_vector,
+                       position_vector,
+                       velocity_vector
+                       )
+    
+    measurement = 1
     
     for i in range(number_of_iterations):
-        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
         
-        kinetic_energy = sum(mass_vector[i] * np.linalg.norm(velocity_vector[i])**2 / 2 for i in range(len(mass_vector)))
-        potential_energy = sum(-1* G * mass_vector[i] * mass_vector[j] / np.linalg.norm(position_vector[j] - position_vector[i]) for i in range(len(mass_vector)) for j in range(len(mass_vector)) if i < j)
+        position_vector, velocity_vector = method(G,
+                                                  delta_t,
+                                                  mass_vector,
+                                                  position_vector,
+                                                  velocity_vector
+                                                  )
         
-        if np.isclose(E_0, 0, 1e-12):
-            energy_error.append(abs(kinetic_energy + potential_energy))
-            plt.ylabel("Absolute Energy Error")
-        else:
-            energy_error.append((kinetic_energy + potential_energy - E_0) / abs(E_0))
-            plt.ylabel("Relative Energy Error")
+        if (i + 1) % iterations_between_updates == 0:
+        
+            time[measurement] = (i + 1) * delta_t
+        
+            energy = total_energy(G,
+                                  mass_vector,
+                                  position_vector,
+                                  velocity_vector
+                                  )
+        
+            if abs(E_0) < 1e-12:
+                energy_error[measurement] = abs(energy - E_0)
+            else:
+                energy_error[measurement] = (energy - E_0) / abs(E_0)
+            
+            measurement += 1
+        
+    return time, energy_error
 
-    time = np.arange(len(energy_error)) * delta_t
+@njit
+def conservation_of_linear_momentum(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    plt.plot(time, energy_error)
-
-    plt.xlabel("Time")
-    plt.title("Energy Conservation Using The Forward Euler Method")
-
-    plt.show()
-
-def conservation_of_linear_momentum(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
-    linear_momentum_error = []
+    linear_momentum_error = np.empty(number_of_measurements)
+    time = np.empty(number_of_measurements)
     
-    P_0 = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
-
-    linear_momentum_error.append(np.float64(0))
+    linear_momentum_error[0] = 0.0
+    time[0] = 0.0
+    
+    P_0 = total_linear_momentum(mass_vector,
+                                position_vector,
+                                velocity_vector
+                                )
+    
+    P_0_norm = np.linalg.norm(P_0)
+    
+    measurement = 1
     
     for i in range(number_of_iterations):
-        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
         
-        linear_momentum = sum(mass_vector[i] * velocity_vector[i] for i in range(len(mass_vector)))
+        position_vector, velocity_vector = method(G,
+                                                  delta_t,
+                                                  mass_vector,
+                                                  position_vector,
+                                                  velocity_vector
+                                                  )
         
-        if np.isclose(np.linalg.norm(P_0), 0, atol = 1e-12):
-            linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0))
-            plt.ylabel("Absolute Linear Momentum Error")
-        else:
-            linear_momentum_error.append(np.linalg.norm(linear_momentum - P_0) / np.linalg.norm(P_0))
-            plt.ylabel("Relative Linear Momentum Error")
-    
-    time = np.arange(len(linear_momentum_error)) * delta_t
-    
-    plt.plot(time, linear_momentum_error)
-    
-    plt.xlabel("Time")
-    plt.title("Linear Momentum Conservation Using The Forward Euler Method")
+        if (i + 1) % iterations_between_updates == 0:
+            
+            time[measurement] = (i + 1) * delta_t
+            
+            linear_momentum = total_linear_momentum(G,
+                                                    mass_vector,
+                                                    position_vector,
+                                                    velocity_vector
+                                                    )
+        
+            if P_0_norm < 1e-12:
+                linear_momentum_error[measurement] = np.linalg.norm(linear_momentum - P_0)
+            else:
+                linear_momentum_error[measurement] = np.linalg.norm(linear_momentum - P_0) / P_0_norm
+                
+            measurement += 1
+            
+    return time, linear_momentum_error
 
-    plt.show()
+@njit
+def conservation_of_angular_momentum(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-def conservation_of_angular_momentum(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
-    angular_momentum_error = []
+    angular_momentum_error = np.empty(number_of_measurements)
+    time = np.empty(number_of_measurements)
     
-    L_0 = sum(np.cross(position_vector[i], mass_vector[i] * velocity_vector[i]) for i in range(len(mass_vector)))
+    angular_momentum_error[0] = 0.0
+    time[0] = 0.0
     
-    angular_momentum_error.append(np.float64(0))
+    L_0 = total_angular_momentum(mass_vector,
+                                 position_vector,
+                                 velocity_vector
+                                 )
+    
+    L_0_norm = np.linalg.norm(L_0)
+    
+    measurement = 1
     
     for i in range(number_of_iterations):
-        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
         
-        angular_momentum = sum(np.cross(position_vector[i], mass_vector[i] * velocity_vector[i]) for i in range(len(mass_vector)))
+        position_vector, velocity_vector = method(G,
+                                                  delta_t,
+                                                  mass_vector,
+                                                  position_vector,
+                                                  velocity_vector
+                                                  )
         
-        if np.isclose(np.linalg.norm(L_0), 0, atol = 1e-12):
-            angular_momentum_error.append(np.linalg.norm(angular_momentum - L_0))
-            plt.ylabel("Absolute Angular Momentum Error")
-        else:
-            angular_momentum_error.append(np.linalg.norm(angular_momentum - L_0) / np.linalg.norm(L_0))
-            plt.ylabel("Relative Angular Momentum Error")
-        
-    time = np.arange(len(angular_momentum_error)) * delta_t
+        if (i + 1) % iterations_between_updates == 0:
+            
+            time[measurement] = (i + 1) * delta_t
+            
+            angular_momentum = total_angular_momentum(G,
+                                                      mass_vector,
+                                                      position_vector,
+                                                      velocity_vector
+                                                      )
+            if L_0_norm < 1e-12:
+                angular_momentum_error[measurement] = np.linalg.norm(angular_momentum - L_0)
+            else:
+                angular_momentum_error[measurement] = np.linalg.norm(angular_momentum - L_0) / L_0_norm
+                
+            measurement += 1
+            
+    return time, angular_momentum_error
+
+
+def energy_conservation_comparison(number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    plt.plot(time, angular_momentum_error)
+    methods = [runge_kutta_4_method]
     
-    if method == forward_euler_method:
-        title = "Forward Euler Method"
-    elif method == runge_kutta_4_method:
-        title = "Runge Kutta Method"
-    else:
-        title = "Leapfrog Method"
+    names = ["Runge Kutta"]
+        
+    for method, name in zip(methods, names):
+        
+        time, energy_error = conservation_of_energy(method,
+                                                    number_of_iterations,
+                                                    iterations_between_updates,
+                                                    G,
+                                                    delta_t,
+                                                    mass_vector,
+                                                    position_vector,
+                                                    velocity_vector
+                                                    )
+
+        plt.plot(time, np.abs(energy_error), label = name)
     
     plt.xlabel("Time")
-    plt.title(f"Angular Momentum Conservation Using The {title}")
-    
+    plt.ylabel("Absolute Relative Energy Error")
+    plt.yscale("log")
+    plt.title(f"Energy Conservation with Δt = {delta_t}")
+    plt.legend()
+    plt.grid()
     plt.show()
-    
+
+energy_conservation_comparison(250000, 20, G, 0.05, mass_vector, position_vector, velocity_vector)
 
 
-#conservation_of_energy(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
-#conservation_of_linear_momentum(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
-#conservation_of_angular_momentum(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
+
+
+
+
+
+
+
 
 
 
