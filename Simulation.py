@@ -14,17 +14,26 @@ G = 1
 
 delta_t = 0.01
 
-mass_vector = np.array([1.0,1.0,1.0])
+mass_vector = np.array([1.0,1.0])
 
-position_vector = np.array([[-0.97000436,0.24308753,0.0],
-                            [0.97000436,-0.24308753,0.0],
-                            [0.0,0.0,0.0]
+position_vector = np.array([[0.0,1.0,0.0],
+                            [0.0,-1.0,0.0]
                             ])
 
-velocity_vector = np.array([[0.466203685,0.432365730,0.0],
-                            [0.466203685,0.432365730,0.0],
-                            [-0.932407370,-0.864731460,0.0]
+velocity_vector = np.array([[0.5,0.0,0.0],
+                            [-0.5,0.0,0.0]
                             ])
+
+
+#position_vector = np.array([[-0.97000436,0.24308753,0.0],
+#                            [0.97000436,-0.24308753,0.0],
+#                            [0.0,0.0,0.0]
+#                            ])
+
+#velocity_vector = np.array([[0.466203685,0.432365730,0.0],
+#                            [0.466203685,0.432365730,0.0],
+#                            [-0.932407370,-0.864731460,0.0]
+#                            ])
 
 
 
@@ -112,12 +121,12 @@ def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
 
 
 
-def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
+def run_animation(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
     trajectory = []
 
-    for i in range(10000):
-        position_vector, velocity_vector = runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector)
+    for i in range(number_of_iterations):
+        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
         trajectory.append(position_vector.copy())
 
     trajectory = np.array(trajectory)
@@ -158,7 +167,7 @@ def run_animation(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     return animation
 
-#animation = run_animation(G, delta_t, mass_vector, position_vector, velocity_vector)
+#animation = run_animation(leapfrog_method, 10000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 @njit
 def total_energy(G, mass_vector, position_vector, velocity_vector):
@@ -386,10 +395,93 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
             
     fig.suptitle(f"{conserved_quantity_name} Conservation Comparison", fontsize = 16)        
     
-    
     plt.show()
 
 
-plot_graphs(conservation_of_energy, 100000, 1, G, mass_vector, position_vector, velocity_vector)
+def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    orbit = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
+    orbit[0] = position_vector
+    
+    for i in range(number_of_iterations):
+        position_vector, velocity_vector = method(G,
+                                                  delta_t,
+                                                  mass_vector,
+                                                  position_vector,
+                                                  velocity_vector)
+        orbit[i + 1] = position_vector.copy()
+    
+    fig, ax = plt.subplots()    
+    
+    for body in range(len(mass_vector)):
+        ax.plot(orbit[:, body, 0], orbit[:, body, 1], label = f"Body {body + 1}")
+
+    ax.set_xlim(
+        orbit[:, :, 0].min() - 0.5,
+        orbit[:, :, 0].max() + 0.5
+        )    
+    
+    ax.set_ylim(
+        orbit[:, :, 1].min() - 0.5,
+        orbit[:, :, 1].max() + 0.5
+        )
+    
+    ax.set_aspect("equal")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.legend()
+    ax.grid()
+    ax.set_title(f"Orbits over {number_of_iterations * delta_t} seconds")
+    
+    plt.show()
+    
+#orbit_graph(leapfrog_method, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
+
+def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    distance = np.zeros(number_of_iterations + 1)
+    distance[0] = np.linalg.norm(position_vector[1] - position_vector[0])
+    time = np.zeros(number_of_iterations + 1)
+    time[0] = 0.0
+    
+    for i in range(number_of_iterations):
+        position_vector, velocity_vector = method(G,
+                                                  delta_t,
+                                                  mass_vector,
+                                                  position_vector,
+                                                  velocity_vector)
+        distance[i + 1] = np.linalg.norm(position_vector[1] - position_vector[0])
+        time[i + 1] = delta_t * (i + 1)
+
+    fig, ax = plt.subplots()
+    
+    ax.plot(time, distance, label = "Distance between bodies")
+    
+    ax.set_xlim(
+        time[:].min() - 0.5,
+        time[:].max() + 0.5
+        )    
+    
+    ax.set_ylim(
+        -0.5,
+        distance[:].max() + 1
+        )
+    
+    #ax.set_aspect("equal")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Absolute Distance")
+    ax.legend()
+    ax.grid()
+    ax.set_title("Absolute Distance Between Bodies")
+    
+    plt.show()
+
+distance_between_bodies(leapfrog_method, 100000, G, delta_t, mass_vector, position_vector, velocity_vector)
+
+
+
+
+
+#plot_graphs(conservation_of_energy, 1000, 1, G, mass_vector, position_vector, velocity_vector)
 
 
