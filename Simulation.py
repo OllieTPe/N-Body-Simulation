@@ -14,26 +14,27 @@ G = 1
 
 delta_t = 0.01
 
-mass_vector = np.array([1.0,1.0])
+#mass_vector = np.array([1.0,1.0])
 
-position_vector = np.array([[0.0,1.0,0.0],
-                            [0.0,-1.0,0.0]
+#position_vector = np.array([[0.0,1.0,0.0],
+ #                           [0.0,-1.0,0.0]
+  #                          ])
+
+#velocity_vector = np.array([[0.5,0.0,0.0],
+ #                           [-0.5,0.0,0.0]
+  #                           ])
+
+mass_vector = np.array([1.0,1.0,1.0])
+
+position_vector = np.array([[-0.97000436,0.24308753,0.0],
+                            [0.97000436,-0.24308753,0.0],
+                            [0.0,0.0,0.0]
                             ])
 
-velocity_vector = np.array([[0.5,0.0,0.0],
-                            [-0.5,0.0,0.0]
+velocity_vector = np.array([[0.466203685,0.432365730,0.0],
+                            [0.466203685,0.432365730,0.0],
+                            [-0.932407370,-0.864731460,0.0]
                             ])
-
-
-#position_vector = np.array([[-0.97000436,0.24308753,0.0],
-#                            [0.97000436,-0.24308753,0.0],
-#                            [0.0,0.0,0.0]
-#                            ])
-
-#velocity_vector = np.array([[0.466203685,0.432365730,0.0],
-#                            [0.466203685,0.432365730,0.0],
-#                            [-0.932407370,-0.864731460,0.0]
-#                            ])
 
 
 
@@ -435,27 +436,35 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     
     plt.show()
     
-#orbit_graph(leapfrog_method, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
+orbit_graph(leapfrog_method, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    distance = np.zeros(number_of_iterations + 1)
-    distance[0] = np.linalg.norm(position_vector[1] - position_vector[0])
     time = np.zeros(number_of_iterations + 1)
     time[0] = 0.0
+    distance = np.zeros(number_of_iterations + 1)
+    
+    for j in range(len(mass_vector)):
+        for k in range(j + 1, len(mass_vector)):
+            distance[0] += np.linalg.norm(position_vector[j] - position_vector[k])
     
     for i in range(number_of_iterations):
+        
         position_vector, velocity_vector = method(G,
                                                   delta_t,
                                                   mass_vector,
                                                   position_vector,
-                                                  velocity_vector)
-        distance[i + 1] = np.linalg.norm(position_vector[1] - position_vector[0])
+                                                  velocity_vector
+                                                  )
         time[i + 1] = delta_t * (i + 1)
+    
+        for j in range(len(mass_vector)):
+            for k in range(j + 1, len(mass_vector)):
+                distance[i + 1] += np.linalg.norm(position_vector[k] - position_vector[j])
 
     fig, ax = plt.subplots()
     
-    ax.plot(time, distance, label = "Distance between bodies")
+    ax.plot(time, distance, label = "Distance Between Bodies")
     
     ax.set_xlim(
         time[:].min() - 0.5,
@@ -463,24 +472,27 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
         )    
     
     ax.set_ylim(
-        -0.5,
-        distance[:].max() + 1
+        distance[:].min() - 0.5,
+        distance[:].max() + 0.5
         )
     
     #ax.set_aspect("equal")
     ax.set_xlabel("Time")
-    ax.set_ylabel("Absolute Distance")
+    ax.set_ylabel("Sum of Pairwise Distances")
     ax.legend()
     ax.grid()
-    ax.set_title("Absolute Distance Between Bodies")
+    ax.set_title("Sum of Pairwise Distances Over Time")
     
     plt.show()
 
-distance_between_bodies(leapfrog_method, 100000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 
 
 
+
+
+
+#distance_between_bodies(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 #plot_graphs(conservation_of_energy, 1000, 1, G, mass_vector, position_vector, velocity_vector)
 
