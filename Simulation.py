@@ -436,8 +436,6 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     
     plt.show()
     
-orbit_graph(leapfrog_method, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
-
 def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
     time = np.zeros(number_of_iterations + 1)
@@ -485,6 +483,68 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
     
     plt.show()
 
+def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector):
+    
+    reference_solution = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
+    reference_solution[0] = position_vector
+    simulation = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
+    simulation[0] = position_vector
+    time = np.zeros(number_of_iterations + 1)
+    
+    reference_steps_per_step = int(round(delta_t / delta_t_ref))
+    
+    position_vector_copy = position_vector.copy()
+    velocity_vector_copy = velocity_vector.copy()
+    
+    for i in range(number_of_iterations * reference_steps_per_step):
+        
+        position_vector, velocity_vector = runge_kutta_4_method(G,
+                                                                delta_t_ref,
+                                                                mass_vector,
+                                                                position_vector,
+                                                                velocity_vector
+                                                                )
+        
+        if (i + 1) % reference_steps_per_step == 0:
+            
+            reference_solution[(i + 1) // reference_steps_per_step] = position_vector
+    
+    for j in range(number_of_iterations):
+        
+        position_vector_copy, velocity_vector_copy = method(G,
+                                                            delta_t,
+                                                            mass_vector,
+                                                            position_vector_copy,
+                                                            velocity_vector_copy
+                                                            )
+        
+        simulation[j + 1] = position_vector
+        time[j + 1] = delta_t * (j + 1)
+    
+    error = np.zeros(number_of_iterations + 1)
+    
+    for k in range(number_of_iterations + 1):
+        
+        summand = 0
+        
+        for l in range(len(mass_vector)):
+            
+            distance = simulation[k,l] - reference_solution[k,l]
+            summand += np.dot(distance, distance)
+        
+        error[k] = np.sqrt(summand)
+
+    fig, ax = plt.subplots()
+    
+    ax.plot(time, error, label = "Convergence Error")
+    
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Error")
+    ax.legend()
+    ax.grid()
+    ax.set_title("Error")
+    
+    plt.show()
 
 
 
@@ -492,8 +552,15 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
 
 
 
-#distance_between_bodies(leapfrog_method, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
-#plot_graphs(conservation_of_energy, 1000, 1, G, mass_vector, position_vector, velocity_vector)
+
+
+
+
+
+
+
+
+
 
 
