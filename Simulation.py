@@ -547,10 +547,72 @@ def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_r
     plt.show()
 
 
+def convergence(method, total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
+    
+    delta_t_times = [0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125]
+    
+    error_at_final_time = []
+    
+    number_of_iterations_ref = int(round(total_time / delta_t_ref))
+    
+    position_ref = position_vector.copy()
+    velocity_ref = velocity_vector.copy()
+    
+    for i in range(number_of_iterations_ref):
+        
+        position_ref, velocity_ref = runge_kutta_4_method(G,
+                                                          delta_t_ref,
+                                                          mass_vector,
+                                                          position_ref,
+                                                          velocity_ref
+                                                          )
+    
+    for delta_t in delta_t_times:
+        
+        position = position_vector.copy()
+        velocity = velocity_vector.copy()
+        
+        number_of_iterations = int(round(total_time / delta_t))
+        
+        for j in range(number_of_iterations):
+            
+            position, velocity = method(G,
+                                        delta_t,
+                                        mass_vector,
+                                        position,
+                                        velocity
+                                        )
+            
+                
+        summand = 0
+                
+        for k in range(len(mass_vector)):
+                    
+            distance = position[k] - position_ref[k]
+            summand += np.dot(distance, distance)
+                
+        error = np.sqrt(summand)
+        error_at_final_time.append(error)
+    
+    print(delta_t_times)
+    print(error_at_final_time)
+    
+    fig, ax = plt.subplots()
+    
+    ax.plot(delta_t_times, error_at_final_time, label = "Convergence Error")
+    
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    
+    ax.set_xlabel(r"$\Delta t$")
+    ax.set_ylabel("Error at Final Time")
+    ax.legend()
+    ax.grid()
+    ax.set_title("Convergence Error")
+    
+    plt.show()
 
-
-
-
+convergence(runge_kutta_4_method, 1, G, 0.0001, mass_vector, position_vector, velocity_vector)
 
 
 
