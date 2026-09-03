@@ -547,16 +547,20 @@ def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_r
     plt.show()
 
 
-def convergence(method, total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
+def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
     
     delta_t_times = [0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125]
     
-    error_at_final_time = []
+    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    
+    method_names = ["Forward Euler", "Runge Kutta", "Leapfrog"]
     
     number_of_iterations_ref = int(round(total_time / delta_t_ref))
     
     position_ref = position_vector.copy()
     velocity_ref = velocity_vector.copy()
+    
+    fig, ax = plt.subplots()
     
     for i in range(number_of_iterations_ref):
         
@@ -567,40 +571,41 @@ def convergence(method, total_time, G, delta_t_ref, mass_vector, position_vector
                                                           velocity_ref
                                                           )
     
-    for delta_t in delta_t_times:
+    for method, method_name in zip(methods, method_names):
         
-        position = position_vector.copy()
-        velocity = velocity_vector.copy()
+        error_at_final_time = []
         
-        number_of_iterations = int(round(total_time / delta_t))
-        
-        for j in range(number_of_iterations):
+        for delta_t in delta_t_times:
             
-            position, velocity = method(G,
-                                        delta_t,
-                                        mass_vector,
-                                        position,
-                                        velocity
-                                        )
             
+            position = position_vector.copy()
+            velocity = velocity_vector.copy()
+            
+            number_of_iterations = int(round(total_time / delta_t))
+            
+            for j in range(number_of_iterations):
                 
-        summand = 0
+                position, velocity = method(G,
+                                            delta_t,
+                                            mass_vector,
+                                            position,
+                                            velocity
+                                            )
                 
-        for k in range(len(mass_vector)):
                     
-            distance = position[k] - position_ref[k]
-            summand += np.dot(distance, distance)
-                
-        error = np.sqrt(summand)
-        error_at_final_time.append(error)
-    
-    print(delta_t_times)
-    print(error_at_final_time)
-    
-    fig, ax = plt.subplots()
-    
-    ax.plot(delta_t_times, error_at_final_time, label = "Convergence Error")
-    
+            summand = 0
+                    
+            for k in range(len(mass_vector)):
+                        
+                distance = position[k] - position_ref[k]
+                summand += np.dot(distance, distance)
+                    
+            error = np.sqrt(summand)
+            error_at_final_time.append(error)
+            slope = (np.log(error_at_final_time[-1]) - np.log(error_at_final_time[0])) / (np.log(delta_t_times[-1]) - np.log(delta_t_times[0]))
+            
+        ax.plot(delta_t_times, error_at_final_time, label = f"{method_name} (p = {slope:.3f})")
+
     ax.set_xscale("log")
     ax.set_yscale("log")
     
@@ -612,7 +617,7 @@ def convergence(method, total_time, G, delta_t_ref, mass_vector, position_vector
     
     plt.show()
 
-convergence(runge_kutta_4_method, 1, G, 0.0001, mass_vector, position_vector, velocity_vector)
+convergence(1, G, 0.0001, mass_vector, position_vector, velocity_vector)
 
 
 
