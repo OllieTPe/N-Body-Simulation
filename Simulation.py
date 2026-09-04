@@ -292,8 +292,7 @@ def conservation_of_linear_momentum(method, number_of_iterations, iterations_bet
             
             time[measurement] = (i + 1) * delta_t
             
-            linear_momentum = total_linear_momentum(G,
-                                                    mass_vector,
+            linear_momentum = total_linear_momentum(mass_vector,
                                                     position_vector,
                                                     velocity_vector
                                                     )
@@ -340,8 +339,7 @@ def conservation_of_angular_momentum(method, number_of_iterations, iterations_be
             
             time[measurement] = (i + 1) * delta_t
             
-            angular_momentum = total_angular_momentum(G,
-                                                      mass_vector,
+            angular_momentum = total_angular_momentum(mass_vector,
                                                       position_vector,
                                                       velocity_vector
                                                       )
@@ -363,19 +361,19 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
     else:
         conserved_quantity_name = "Angular Momentum"
     
-    fig, axes = plt.subplots(3, 3, figsize = (9,6), sharex = True, sharey = "row", constrained_layout = True)
+    methods = [runge_kutta_4_method, leapfrog_method]
     
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    method_names = ["Runge Kutta", "Leapfrog"]
     
-    method_names = ["Forward Euler", "Runge Kutta", "Leapfrog"]
+    delta_t_times = [0.05, 0.025, 0.0125]
     
-    delta_t_times = [0.1, 0.05, 0.01]
+    fig, axes = plt.subplots(len(methods), len(delta_t_times), figsize = (9,6), sharex = True, sharey = "row", constrained_layout = True)
     
     for row, (method, method_name) in enumerate(zip(methods, method_names)):
         for column, delta_t in enumerate(delta_t_times):
             
             number_of_iterations = int(total_time / delta_t)
-            iterations_between_updates = int(measurement_interval / delta_t)
+            iterations_between_updates = 1 #int(measurement_interval / delta_t)
             
             time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
             
@@ -391,13 +389,14 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
             if column == 0:
                 ax.set_ylabel(f"{method_name} Error")
                 
-            if row == 2:
+            if row == len(methods) - 1:
                 ax.set_xlabel("Time")
             
     fig.suptitle(f"{conserved_quantity_name} Conservation Comparison", fontsize = 16)        
     
     plt.show()
 
+#plot_graphs(conservation_of_energy, 10, 1, G, mass_vector, position_vector, velocity_vector)
 
 def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
@@ -409,7 +408,9 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
                                                   delta_t,
                                                   mass_vector,
                                                   position_vector,
-                                                  velocity_vector)
+                                                  velocity_vector
+                                                  )
+        
         orbit[i + 1] = position_vector.copy()
     
     fig, ax = plt.subplots()    
@@ -432,9 +433,11 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     ax.set_ylabel("y")
     ax.legend()
     ax.grid()
-    ax.set_title(f"Orbits over {number_of_iterations * delta_t} seconds")
+    ax.set_title(f"Trajectories over 50,000 orbits (≃ {round(number_of_iterations * delta_t)} seconds)")
     
     plt.show()
+    
+#orbit_graph(runge_kutta_4_method, 5*6325900, G, delta_t, mass_vector, position_vector, velocity_vector)
     
 def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
@@ -462,7 +465,7 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
 
     fig, ax = plt.subplots()
     
-    ax.plot(time, distance, label = "Distance Between Bodies")
+    ax.plot(time, distance, label = "Distance")
     
     ax.set_xlim(
         time[:].min() - 0.5,
@@ -476,12 +479,14 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
     
     #ax.set_aspect("equal")
     ax.set_xlabel("Time")
-    ax.set_ylabel("Sum of Pairwise Distances")
+    ax.set_ylabel("Sum Of Pairwise Distances Between Objects")
     ax.legend()
     ax.grid()
-    ax.set_title("Sum of Pairwise Distances Over Time")
+    ax.set_title("Sum Of Pairwise Distances Between Objects Over Time")
     
     plt.show()
+
+#distance_between_bodies(runge_kutta_4_method, 5*6325900, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector):
     
@@ -546,6 +551,7 @@ def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_r
     
     plt.show()
 
+#solution_error_over_time(runge_kutta_4_method, 10000, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector)
 
 def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
     
@@ -617,7 +623,71 @@ def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, veloci
     
     plt.show()
 
-convergence(1, G, 0.0001, mass_vector, position_vector, velocity_vector)
+#convergence(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector)
+
+def plot_on_same_graph(conserved_quantity, method, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
+    
+    if conserved_quantity == conservation_of_energy:
+        conserved_quantity_name = "Energy"
+    elif conserved_quantity == conservation_of_linear_momentum:
+        conserved_quantity_name = "Linear Momentum"
+    else:
+        conserved_quantity_name = "Angular Momentum"
+    
+    if method == forward_euler_method:
+        method_name = "Forward Euler"
+    elif method == runge_kutta_4_method:
+        method_name = "Runge Kutta"
+    else:
+        method_name = "Leapfrog"
+    
+    delta_t_times = [0.05, 0.025, 0.0125]
+    
+    fig, ax = plt.subplots()
+    
+    for delta_t in delta_t_times:
+        
+        number_of_iterations = int(total_time / delta_t)
+        iterations_between_updates = 1
+        
+        time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
+            
+        ax.plot(time, abs(conserved_quantity_error), label = f"Δt = {delta_t}")
+        ax.set_yscale("log")
+        ax.grid(which = "both", alpha = 0.3)
+
+    ax.set_title(f"Conservation of {conserved_quantity_name} Using The {method_name} Method")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Absolute Relative Error")
+    ax.legend()
+    ax.grid()
+
+    plt.show()
+
+plot_on_same_graph(conservation_of_energy, leapfrog_method, 10, 1, G, mass_vector, position_vector, velocity_vector)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
