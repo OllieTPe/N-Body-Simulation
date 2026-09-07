@@ -14,27 +14,27 @@ G = 1
 
 delta_t = 0.01
 
-#mass_vector = np.array([1.0,1.0])
+mass_vector = np.array([1.0,1.0])
 
-#position_vector = np.array([[0.0,1.0,0.0],
- #                           [0.0,-1.0,0.0]
-  #                          ])
-
-#velocity_vector = np.array([[0.5,0.0,0.0],
- #                           [-0.5,0.0,0.0]
-  #                           ])
-
-mass_vector = np.array([1.0,1.0,1.0])
-
-position_vector = np.array([[-0.97000436,0.24308753,0.0],
-                            [0.97000436,-0.24308753,0.0],
-                            [0.0,0.0,0.0]
+position_vector = np.array([[0.0,1.0,0.0],
+                            [0.0,-1.0,0.0]
                             ])
 
-velocity_vector = np.array([[0.466203685,0.432365730,0.0],
-                            [0.466203685,0.432365730,0.0],
-                            [-0.932407370,-0.864731460,0.0]
-                            ])
+velocity_vector = np.array([[0.5,0.0,0.0],
+                            [-0.5,0.0,0.0]
+                             ])
+
+#mass_vector = np.array([1.0,1.0,1.0])
+
+#position_vector = np.array([[-0.97000436,0.24308753,0.0],
+ #                           [0.97000436,-0.24308753,0.0],
+  #                          [0.0,0.0,0.0]
+   #                         ])
+
+#velocity_vector = np.array([[0.466203685,0.432365730,0.0],
+ #                           [0.466203685,0.432365730,0.0],
+  #                          [-0.932407370,-0.864731460,0.0]
+   #                         ])
 
 
 
@@ -433,17 +433,21 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     ax.set_ylabel("y")
     ax.legend()
     ax.grid()
-    ax.set_title(f"Trajectories over 50,000 orbits (≃ {round(number_of_iterations * delta_t)} seconds)")
+    ax.set_title("Trajectories over 50,000 orbits")
     
     plt.show()
     
-#orbit_graph(runge_kutta_4_method, 5*6325900, G, delta_t, mass_vector, position_vector, velocity_vector)
+#orbit_graph(runge_kutta_4_method, 5*63259, G, delta_t, mass_vector, position_vector, velocity_vector)
     
-def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+def distance_between_bodies(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    time = np.zeros(number_of_iterations + 1)
+    number_of_measurements = number_of_iterations // iterations_between_updates + 1
+    
+    measurement = 1
+    
+    time = np.zeros(number_of_measurements)
     time[0] = 0.0
-    distance = np.zeros(number_of_iterations + 1)
+    distance = np.zeros(number_of_measurements)
     
     for j in range(len(mass_vector)):
         for k in range(j + 1, len(mass_vector)):
@@ -457,36 +461,31 @@ def distance_between_bodies(method, number_of_iterations, G, delta_t, mass_vecto
                                                   position_vector,
                                                   velocity_vector
                                                   )
-        time[i + 1] = delta_t * (i + 1)
-    
-        for j in range(len(mass_vector)):
-            for k in range(j + 1, len(mass_vector)):
-                distance[i + 1] += np.linalg.norm(position_vector[k] - position_vector[j])
+        
+        if (i + 1) % iterations_between_updates == 0:
+            
+            time[measurement] = (i + 1) * delta_t
+            
+            for j in range(len(mass_vector)):
+                for k in range(j + 1, len(mass_vector)):
+                    distance[measurement] += np.linalg.norm(position_vector[k] - position_vector[j])
+
+            measurement += 1
 
     fig, ax = plt.subplots()
     
-    ax.plot(time, distance, label = "Distance")
-    
-    ax.set_xlim(
-        time[:].min() - 0.5,
-        time[:].max() + 0.5
-        )    
-    
-    ax.set_ylim(
-        distance[:].min() - 0.5,
-        distance[:].max() + 0.5
-        )
+    ax.plot(time / 1000, distance, label = "Distance")
     
     #ax.set_aspect("equal")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Sum Of Pairwise Distances Between Objects")
+    ax.set_xlabel("Time (1000s)")
+    ax.set_ylabel("Sum of Pairwise Distances")
     ax.legend()
     ax.grid()
-    ax.set_title("Sum Of Pairwise Distances Between Objects Over Time")
+    ax.set_title("Sum of Pairwise Distances Over Time")
     
     plt.show()
 
-#distance_between_bodies(runge_kutta_4_method, 5*6325900, G, delta_t, mass_vector, position_vector, velocity_vector)
+distance_between_bodies(runge_kutta_4_method, 62832000, 1000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 def solution_error_over_time(method, number_of_iterations, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector):
     
@@ -652,31 +651,56 @@ def plot_on_same_graph(conserved_quantity, method, total_time, measurement_inter
         
         time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
             
-        ax.plot(time, abs(conserved_quantity_error), label = f"Δt = {delta_t}")
+        ax.plot(time / 1000, abs(conserved_quantity_error), label = f"Δt = {delta_t}")
         ax.set_yscale("log")
-        ax.grid(which = "both", alpha = 0.3)
 
     ax.set_title(f"Conservation of {conserved_quantity_name} Using The {method_name} Method")
-    ax.set_xlabel("Time")
+    ax.set_xlabel("Time (Thousands)")
     ax.set_ylabel("Absolute Relative Error")
     ax.legend()
-    ax.grid()
+    ax.grid(which = "both", alpha = 0.3)
 
     plt.show()
 
-plot_on_same_graph(conservation_of_energy, leapfrog_method, 10, 1, G, mass_vector, position_vector, velocity_vector)
+#plot_on_same_graph(conservation_of_energy, leapfrog_method, 10000, 1, G, mass_vector, position_vector, velocity_vector)
 
+def long_term_comparison(conserved_quantity, method_1, method_2, total_time, delta_t, measurement_interval, G, mass_vector, position_vector, velocity_vector):
+    
+    if conserved_quantity == conservation_of_energy:
+        conserved_quantity_name = "Energy"
+    elif conserved_quantity == conservation_of_linear_momentum:
+        conserved_quantity_name = "Linear Momentum"
+    else:
+        conserved_quantity_name = "Angular Momentum"
+    
+    method_name = {forward_euler_method: "Forward Euler",
+                   runge_kutta_4_method: "Runge Kutta",
+                   leapfrog_method: "Leapfrog"
+                   }
 
+    methods = [method_1, method_2]
 
+    fig, ax = plt.subplots()
+    
+    number_of_iterations = int(total_time / delta_t)
+    iterations_between_updates = int(round(measurement_interval / delta_t))
+    
+    for method in methods:
+        
+        time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
 
+        ax.plot(time / 1000, abs(conserved_quantity_error), label = method_name[method])
+        
+    ax.set_xlabel("Time (Thousands)")
+    ax.set_ylabel("Absolute Relative Error")
+    ax.set_title(f"Absolute Relative {conserved_quantity_name} Error: {method_name[method_1]} vs {method_name[method_2]}")
+    ax.set_yscale("log")
+    ax.grid(which = "both", alpha = 0.3)
+    ax.legend()
+    
+    plt.show()
 
-
-
-
-
-
-
-
+#long_term_comparison(conserved_quantity, method_1, method_2, total_time, delta_t, measurement_interval, G, mass_vector, position_vector, velocity_vector)
 
 
 
