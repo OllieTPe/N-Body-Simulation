@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from numba import njit
+from time import perf_counter
 
 G = 1
 
@@ -354,12 +355,10 @@ def conservation_of_angular_momentum(method, number_of_iterations, iterations_be
 
 def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    if conserved_quantity == conservation_of_energy:
-        conserved_quantity_name = "Energy"
-    elif conserved_quantity == conservation_of_linear_momentum:
-        conserved_quantity_name = "Linear Momentum"
-    else:
-        conserved_quantity_name = "Angular Momentum"
+    conserved_quantity_names = {conservation_of_energy: "Energy",
+                                conservation_of_linear_momentum: "Linear Momentum",
+                                conservation_of_angular_momentum: "Angular Momentum"
+                                }
     
     methods = [runge_kutta_4_method, leapfrog_method]
     
@@ -392,7 +391,7 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
             if row == len(methods) - 1:
                 ax.set_xlabel("Time")
             
-    fig.suptitle(f"{conserved_quantity_name} Conservation Comparison", fontsize = 16)        
+    fig.suptitle(f"{conserved_quantity_names[conserved_quantity]} Conservation Comparison", fontsize = 16)        
     
     plt.show()
 
@@ -656,19 +655,14 @@ def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, veloci
 
 def plot_on_same_graph(conserved_quantity, method, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    if conserved_quantity == conservation_of_energy:
-        conserved_quantity_name = "Energy"
-    elif conserved_quantity == conservation_of_linear_momentum:
-        conserved_quantity_name = "Linear Momentum"
-    else:
-        conserved_quantity_name = "Angular Momentum"
+    conserved_quantity_names = {conservation_of_energy: "Energy",
+                                conservation_of_linear_momentum: "Linear Momentum",
+                                conservation_of_angular_momentum: "Angular Momentum"
+                                }
     
-    if method == forward_euler_method:
-        method_name = "Forward Euler"
-    elif method == runge_kutta_4_method:
-        method_name = "Runge Kutta"
-    else:
-        method_name = "Leapfrog"
+    method_names = {forward_euler_method: "Forward Euler",
+                    runge_kutta_4_method: "Runge Kutta",
+                    leapfrog_method: "Leapfrog"}
     
     delta_t_times = [0.05, 0.025, 0.0125, 0.00625, 0.003125]
     
@@ -684,7 +678,7 @@ def plot_on_same_graph(conserved_quantity, method, total_time, measurement_inter
         ax.plot(time, abs(conserved_quantity_error), label = f"Δt = {delta_t}")
         ax.set_yscale("log")
 
-    ax.set_title(f"Conservation of {conserved_quantity_name} Using The {method_name} Method")
+    ax.set_title(f"Conservation of {conserved_quantity_names[conserved_quantity]} Using The {method_names[method]} Method")
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Absolute Relative Error")
     ax.legend()
@@ -696,12 +690,10 @@ def plot_on_same_graph(conserved_quantity, method, total_time, measurement_inter
 
 def long_term_comparison(conserved_quantity, method_1, method_2, total_time, delta_t, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    if conserved_quantity == conservation_of_energy:
-        conserved_quantity_name = "Energy"
-    elif conserved_quantity == conservation_of_linear_momentum:
-        conserved_quantity_name = "Linear Momentum"
-    else:
-        conserved_quantity_name = "Angular Momentum"
+    conserved_quantity_names = {conservation_of_energy: "Energy",
+                                conservation_of_linear_momentum: "Linear Momentum",
+                                conservation_of_angular_momentum: "Angular Momentum"
+                                }
     
     method_name = {forward_euler_method: "Forward Euler",
                    runge_kutta_4_method: "Runge Kutta",
@@ -723,7 +715,7 @@ def long_term_comparison(conserved_quantity, method_1, method_2, total_time, del
         
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel("Absolute Relative Error")
-    ax.set_title(f"Absolute Relative {conserved_quantity_name} Error")
+    ax.set_title(f"Absolute Relative {conserved_quantity_names[conserved_quantity]} Error")
     ax.grid(which = "both", alpha = 0.3)
     ax.legend()
     ax.set_xscale("log")
@@ -732,18 +724,99 @@ def long_term_comparison(conserved_quantity, method_1, method_2, total_time, del
 
 #long_term_comparison(conservation_of_energy,  forward_euler_method, runge_kutta_4_method, 200, delta_t, delta_t, G, mass_vector, position_vector, velocity_vector)
 
+def method_run_time(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    start = perf_counter()
+    
+    for i in range(number_of_iterations):
+        
+        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
 
+    end = perf_counter()
+    
+    run_time = end - start
+    
+    return run_time
 
+def plot_runtime(G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    
+    number_of_iterations_list = np.array([100, 1000, 10000, 100000, 1000000])
+    
+    runtimes = np.zeros(len(number_of_iterations_list))
+    
+    method_names = {forward_euler_method: "Forward Euler",
+                    runge_kutta_4_method: "Runge Kutta",
+                    leapfrog_method: "Leapfrog"
+                    }
+    
+    fig, ax = plt.subplots()
+    
+    for method in methods:
+        
+        method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        for i, number_of_iterations in enumerate(number_of_iterations_list):
+        
+            runtimes[i] = method_run_time(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        plt.plot(number_of_iterations_list / 1000, runtimes, label = method_names[method])
 
+    ax.set_xlabel(r"Number of Iterations $(10^3)$")
+    ax.set_ylabel("Runtime (s)")
+    ax.set_title("Computational Runtime vs Number of Iterations")
+    ax.grid(which = "both", alpha = 0.3)
+    ax.legend()
+    #ax.set_xscale("log")
+    #ax.set_yscale("log")
+    plt.show()
 
+#plot_runtime(G, delta_t, mass_vector, position_vector, velocity_vector)
 
+def repeated_plot_runtime(number_of_readings, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    method_names = {forward_euler_method: "Forward Euler",
+                    runge_kutta_4_method: "Runge Kutta",
+                    leapfrog_method: "Leapfrog"
+                    }
+    
+    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    
+    for method in methods:
+        
+        method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        runtimes = np.zeros(number_of_readings)
+        
+        for j in range(number_of_readings):
+            
+            runtimes[j] = method_run_time(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector)
 
+        mean = np.mean(runtimes)
 
+        standard_deviation = np.std(runtimes, ddof = 1)
 
+        print(f"{method_names[method]}: {mean:.3f} ± {standard_deviation:.3f} s")
 
-
-
-
-
-
+#repeated_plot_runtime(20, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
