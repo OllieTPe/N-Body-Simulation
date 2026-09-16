@@ -1,9 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 24 18:03:24 2026
 
-@author: olive
+
+
+
+
 """
+N-body gravitational simulation and numerical analysis.
+
+This module simulates Newtonian gravitational systems using direct pairwise
+force evaluation. Forward Euler, fourth-order Runge-Kutta and Leapfrog
+integration methods are implemented and compared through trajectory accuracy,
+conservation properties, convergence, and computational runtime.
+
+The module includes initial conditions for a two-body and a figure-eight
+three-body system.
+
+Created on Mon Aug 24 18:03:24 2026
+Author: Oliver Pearson
+"""
+
+
+
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,6 +35,19 @@ delta_t = 0.01
 
 def two_body_initial_conditions():
     
+    """
+    Return initial conditions for the equal-mass orbit.
+
+    Returns
+    -------
+    mass_vector : ndarray, shape (2,)
+        Masses of the two bodies.
+    position_vector : ndarray, shape (2, 3)
+        Initial Cartesian positions.
+    velocity_vector : ndarray, shape (2, 3)
+        Initial Cartesian velocities.
+    """
+    
     mass_vector = np.array([1.0,1.0])
 
     position_vector = np.array([[0.0,1.0,0.0],
@@ -29,8 +60,20 @@ def two_body_initial_conditions():
     
     return mass_vector, position_vector, velocity_vector
 
-
 def figure_eight_initial_conditions():
+    
+    """
+    Return initial conditions for the equal-mass figure-eight orbit.
+
+    Returns
+    -------
+    mass_vector : ndarray, shape (3,)
+        Masses of the three bodies.
+    position_vector : ndarray, shape (3, 3)
+        Initial Cartesian positions.
+    velocity_vector : ndarray, shape (3, 3)
+        Initial Cartesian velocities.
+    """
     
     mass_vector = np.array([1.0,1.0,1.0])
 
@@ -51,6 +94,24 @@ mass_vector, position_vector, velocity_vector = figure_eight_initial_conditions(
 @njit
 def acceleration(G, mass_vector, position_vector):
     
+    """
+    Calculates the pairwise acceleration vector.
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+        
+    Returns
+    -------
+    acceleration_vector : ndarray, shape (N, 3)
+        Current Cartesian accelerations.
+    """
+    
     acceleration_vector = np.zeros((len(mass_vector), 3))
     
     for i in range(len(mass_vector)):
@@ -65,6 +126,30 @@ def acceleration(G, mass_vector, position_vector):
 @njit
 def forward_euler(G, delta_t, mass_vector, position_vector, velocity_vector):
     
+    """
+    Advance an N-body system by one timestep using forward Euler.
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    position_vector : ndarray, shape (N, 3)
+        Advanced Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Advanced Cartesian velocities.
+    """
+    
     acceleration_vector =  acceleration(G,
                                         mass_vector,
                                         position_vector)
@@ -77,6 +162,30 @@ def forward_euler(G, delta_t, mass_vector, position_vector, velocity_vector):
 
 @njit
 def runge_kutta_4(G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Advance an N-body system by one timestep using fourth-order Runge-Kutta.
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    position_vector : ndarray, shape (N, 3)
+        Advanced Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Advanced Cartesian velocities.
+    """
     
     k_1_velocity = velocity_vector
     k_1_acceleration = acceleration(G,
@@ -112,6 +221,30 @@ def runge_kutta_4(G, delta_t, mass_vector, position_vector, velocity_vector):
 @njit
 def leapfrog(G, delta_t, mass_vector, position_vector, velocity_vector):
     
+    """
+    Advance an N-body system by one timestep using KDK Leapfrog.
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    position_vector : ndarray, shape (N, 3)
+        Advanced Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Advanced Cartesian velocities.
+    """
+    
     acceleration_vector = acceleration(G,
                                        mass_vector,
                                        position_vector
@@ -142,6 +275,26 @@ METHOD_COLOURS = {forward_euler: "tab:blue",
 @njit
 def total_energy(G, mass_vector, position_vector, velocity_vector):
     
+    """
+    Calculate the total energy of the system.
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    total_energy : float
+        Total energy of the system.
+    """
+    
     kinetic_energy = 0.0
     potential_energy = 0.0
     
@@ -157,10 +310,28 @@ def total_energy(G, mass_vector, position_vector, velocity_vector):
             
             potential_energy -= G * mass_vector[i] * mass_vector[j] / distance
             
-    return kinetic_energy + potential_energy
+    total_energy = kinetic_energy + potential_energy
+    
+    return total_energy
 
 @njit
 def total_linear_momentum(mass_vector, velocity_vector):
+    
+    """
+    Calculate the total linear momentum of the system.
+    
+    Parameters
+    ----------
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    linear_momentum : ndarray, shape(3,)
+        Total linear momentum of the system.
+    """
     
     linear_momentum = np.zeros(3)
     
@@ -172,6 +343,24 @@ def total_linear_momentum(mass_vector, velocity_vector):
 
 @njit
 def total_angular_momentum(mass_vector, position_vector, velocity_vector):
+    
+    """
+    Calculate the total angular momentum of the system.
+    
+    Parameters
+    ----------
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape(N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    angular_momentum : ndarray, shape(3,)
+        Total angular momentum of the system.
+    """
     
     angular_momentum = np.zeros(3)
     
@@ -185,6 +374,36 @@ def total_angular_momentum(mass_vector, position_vector, velocity_vector):
 
 @njit
 def conservation_of_energy(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Calculate the energy conservation error over a simulation.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    iterations_between_updates : int
+        Number of integration steps between recorded measurements.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    time : ndarray, shape(number_of_measurements,)
+        Times at which the conservation error is recorded.
+    energy_error : ndarray, shape(number_of_measurements,)
+        Energy conservation error at each recorded time.
+    """
     
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
@@ -233,6 +452,36 @@ def conservation_of_energy(method, number_of_iterations, iterations_between_upda
 @njit
 def conservation_of_linear_momentum(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
     
+    """
+    Calculate the linear momentum conservation error over a simulation.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    iterations_between_updates : int
+        Number of integration steps between recorded measurements.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    time : ndarray, shape(M,)
+        Times at which the conservation error is recorded.
+    linear_momentum_error : ndarray, shape(M,)
+        Linear momentum conservation error at each recorded time.
+    """
+    
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
     linear_momentum_error = np.empty(number_of_measurements)
@@ -277,6 +526,36 @@ def conservation_of_linear_momentum(method, number_of_iterations, iterations_bet
 
 @njit
 def conservation_of_angular_momentum(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Calculate the angular momentum conservation error over a simulation.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    iterations_between_updates : int
+        Number of integration steps between recorded measurements.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    time : ndarray, shape(M,)
+        Times at which the conservation error is recorded.
+    angular_momentum_error : ndarray, shape(M,)
+        Angular momentum conservation error at each recorded time.
+    """
     
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
@@ -332,6 +611,28 @@ ERROR_NAMES = {conservation_of_energy: "Relative Error",
 
 def plot_conservation_comparison(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
+    """
+    Produces a grid of plots for a conserved quantity using different
+    integration methods and different timesteps.
+    
+    Parameters
+    ----------
+    conserved_quantity : callable
+        Conserved quantity of interest.
+    total_time : int
+        Total time of the integration.
+    measurement_interval : float
+        Time interval between recorded measurements.
+    G : float
+        Gravitational constant.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    """
+    
     methods = [runge_kutta_4, leapfrog]
     
     delta_t_times = [0.05, 0.025, 0.0125]
@@ -341,14 +642,14 @@ def plot_conservation_comparison(conserved_quantity, total_time, measurement_int
     for row, method in enumerate(methods):
         for column, delta_t in enumerate(delta_t_times):
             
-            number_of_iterations = int(total_time / delta_t)
+            number_of_iterations = int(round(total_time / delta_t))
             iterations_between_updates = max(1, int(round(measurement_interval / delta_t)))
             
             time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
             
             ax = axes[row, column]
             
-            ax.plot(time, abs(conserved_quantity_error), color = "red")
+            ax.plot(time[1:], conserved_quantity_error[1:], color = "red")
             ax.set_yscale("log")
             ax.grid(which = "both", alpha = 0.3)
             
@@ -368,6 +669,27 @@ def plot_conservation_comparison(conserved_quantity, total_time, measurement_int
 #plot_conservation_comparison(conservation_of_linear_momentum, 10, 0.01, G, mass_vector, position_vector, velocity_vector)
 
 def plot_orbital_trajectories(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Produces a plot of all the trajectories of the N bodies.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    """
     
     orbit = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
     orbit[0] = position_vector
@@ -410,6 +732,39 @@ def plot_orbital_trajectories(method, number_of_iterations, G, delta_t, mass_vec
     
 def sum_of_pairwise_distances(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector, plot = True):
     
+    """
+    Calculates and plots the pairwise distances between bodies over a
+    simulation.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    iterations_between_updates : int
+        Number of integration steps between recorded measurements.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    plot : bool
+        If True, display the resulting plot.
+    
+    Returns
+    -------
+    time : ndarray, shape(M,)
+        Times at which the pairwise distances between bodies is recorded.
+    distance : ndarray, shape(M,)
+        Sum of the pairwise distances between bodies at each recorded time.
+    """
+    
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
     measurement = 1
@@ -448,8 +803,8 @@ def sum_of_pairwise_distances(method, number_of_iterations, iterations_between_u
         ax.plot(time / 1000, distance, label = "Distance")
         
         ax.set_ylim(
-            distance[:].min() - 0.01,
-            distance[:].max() + 0.01
+            distance.min() - 0.01,
+            distance.max() + 0.01
             )
         
         ax.set_xlabel(r"Time ($10^3$ s)")
@@ -464,6 +819,39 @@ def sum_of_pairwise_distances(method, number_of_iterations, iterations_between_u
 #sum_of_pairwise_distances(runge_kutta_4, 6326, 100, G, delta_t, mass_vector, position_vector, velocity_vector, plot = False)
 
 def solution_error_over_time(number_of_iterations, iterations_between_updates, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector, plot = True):
+    
+    """
+    Calculate the trajectory error relative to a higher-accuracy
+    reference solution.
+    
+    Parameters
+    ----------
+    number_of_iterations : int
+        Number of integration steps.
+    iterations_between_updates : int
+        Number of integration steps between recorded measurements.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    delta_t_ref : float
+        Integration timestep for the reference solution.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    plot : bool
+        If True, display the resulting plot.
+    
+    Returns
+    -------
+    time : ndarray, shape(M,)
+        Times at which the position error is recorded.
+    errors : dict
+        Position-error arrays for each numerical integration method.
+    """
     
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
@@ -541,7 +929,7 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
             
             error[k] = np.sqrt(summand)
     
-        errors[METHOD_NAMES[method]] = error.copy()
+        errors[METHOD_NAMES[method]] = error
         
         if plot:
             
@@ -561,7 +949,36 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
 #solution_error_over_time(100, 10, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector, plot = False)
 
 def convergence_of_numerical_methods(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector, plot = True):
-
+    
+    """
+    Calculates the position error at a final time for each integrator
+    at specific timesteps.
+    
+    Parameters
+    ----------
+    total_time : int
+        Total time of the integration.
+    G : float
+        Gravitational constant.
+    delta_t_ref : float
+        Integration timestep for the reference solution.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    plot : bool
+        If True, display the resulting plot.
+    
+    Returns
+    -------
+    delta_t_times : list of float
+        Timesteps used in the convergence analysis.
+    convergence : dict
+        Final-time position-error values for each numerical integrator.
+    """
+    
     delta_t_times = [0.1, 0.05, 0.025, 0.0125, 0.00625]
     
     methods = [forward_euler, runge_kutta_4, leapfrog]
@@ -618,8 +1035,8 @@ def convergence_of_numerical_methods(total_time, G, delta_t_ref, mass_vector, po
             error = np.sqrt(summand)
             error_at_final_time.append(error)
             
-        slope = (np.log(error_at_final_time[-1]) - np.log(error_at_final_time[0])) / (np.log(delta_t_times[-1]) - np.log(delta_t_times[0]))
-    
+        slope = np.polyfit(np.log(delta_t_times), np.log(error_at_final_time), 1)[0]
+        
         convergence[METHOD_NAMES[method]] = error_at_final_time
         
         if plot:
@@ -639,11 +1056,33 @@ def convergence_of_numerical_methods(total_time, G, delta_t_ref, mass_vector, po
         
     return delta_t_times, convergence
 
-#convergence_of_numerical_methods(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector, plot = False)
+#convergence_of_numerical_methods(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector, plot = True)
 
 def conservation_for_different_methods(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    delta_t_times = [0.01, 0.05]
+    """
+    Produce a conservation-error plot for different integration methods
+    and timesteps.
+    
+    Parameters
+    ----------
+    conserved_quantity : callable
+        Conserved quantity of interest.
+    total_time : int
+        Total time of the integration.
+    measurement_interval : float
+        Time interval between recorded measurements.
+    G : float
+        Gravitational constant.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    """
+    
+    delta_t_times = [0.01]
     
     methods = [leapfrog, runge_kutta_4]
     
@@ -653,7 +1092,7 @@ def conservation_for_different_methods(conserved_quantity, total_time, measureme
         
         for delta_t in delta_t_times:
             
-            number_of_iterations = int(total_time / delta_t)
+            number_of_iterations = int(round(total_time / delta_t))
             iterations_between_updates = max(1, int(round(measurement_interval / delta_t)))
             
             time, conserved_quantity_error = conserved_quantity(method,
@@ -666,20 +1105,48 @@ def conservation_for_different_methods(conserved_quantity, total_time, measureme
                                                                 velocity_vector
                                                                 )
                 
-            ax.plot(time / 1000, abs(conserved_quantity_error), label = f"{METHOD_NAMES[method]}, Δt = {delta_t}")
+            ax.plot(time[1:] / 1000, conserved_quantity_error[1:], label = f"{METHOD_NAMES[method]}, Δt = {delta_t}")
             
 
     ax.set_title(f"{CONSERVED_QUANTITY_NAMES[conserved_quantity]} " f"{ERROR_NAMES[conserved_quantity]}")
     ax.set_xlabel(r"Time ($10^{3}$ s)")
-    ax.set_ylabel("Relative Error")
+    ax.set_ylabel(ERROR_NAMES[conserved_quantity])
     ax.set_yscale("log")
     ax.legend()
     ax.grid(which = "both", alpha = 0.3)
     plt.show()
 
-conservation_for_different_methods(conservation_of_energy, 200, delta_t, G, mass_vector, position_vector, velocity_vector)
+#conservation_for_different_methods(conservation_of_energy, 200, delta_t, G, mass_vector, position_vector, velocity_vector)
 
 def method_run_time(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Measure the runtime of a numerical integration method over a
+    specified number of integration steps.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    run_time : float
+        The time taken to complete a number of integrations of a numerical
+        integration method.
+    """
     
     method(G,
            delta_t,
@@ -707,6 +1174,31 @@ def method_run_time(method, number_of_iterations, G, delta_t, mass_vector, posit
 
 def plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector):
     
+    """
+    Produces a plot of the run times for all three numerical integration 
+    methods
+    
+    Parameters
+    ----------
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+
+    Returns
+    -------
+    number_of_iterations_list : ndarray, shape (M,)
+        Numbers of integration steps used for the runtime measurements.
+    runtimes : dict
+        Runtimes for each number of iterations for each numerical integrator.
+    """
+    
     methods = [forward_euler, runge_kutta_4, leapfrog]
     
     number_of_iterations_list = np.array([100, 1000, 10000, 100000, 1000000])
@@ -732,7 +1224,7 @@ def plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector):
         
         runtimes[METHOD_NAMES[method]] = runtime
         
-        plt.plot(number_of_iterations_list / 1000, runtime, label = METHOD_NAMES[method])
+        ax.plot(number_of_iterations_list / 1000, runtime, label = METHOD_NAMES[method])
 
     ax.set_xlabel(r"Number of Iterations $(10^3)$")
     ax.set_ylabel("Runtime (s)")
@@ -746,6 +1238,36 @@ def plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector):
 #plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector, plot = False)
 
 def runtime_statistics(number_of_readings, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Calculates the mean and sample standard deviation for a number of
+    repeated simulations of runtimes for each numerical integrator.
+    
+    Parameters
+    ----------
+    number_of_readings : int
+        Number of times each numerical integrators runtime is tested.
+    number_of_iterations : int
+        Number of integration steps.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    means : dict
+        Mean runtimes for a number of iterations for each numerical integrator.
+    standard_deviations : dict
+        Standard deviation for a number of iterations for each numerical
+        integrator.
+    """
     
     methods = [forward_euler, runge_kutta_4, leapfrog]
     
@@ -771,14 +1293,47 @@ def runtime_statistics(number_of_readings, number_of_iterations, G, delta_t, mas
         mean = np.mean(runtime)
         means[METHOD_NAMES[method]] = mean
         
-        standard_deviation = np.std(runtime, ddof = 1)
-        standard_deviations[METHOD_NAMES[method]] = standard_deviation
+        if number_of_readings > 1:
+        
+            standard_deviation = np.std(runtime, ddof = 1)
+            standard_deviations[METHOD_NAMES[method]] = standard_deviation
 
     return means, standard_deviations
 
 #runtime_statistics(5, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
     
 def position_error_vs_computational_cost(total_time, number_of_readings, delta_t_ref, G, mass_vector, position_vector, velocity_vector, plot = True):
+    
+    """
+    Calculates the position error against the runtime for each numerical
+    integrator.
+    
+    Parameters
+    ----------
+    total_time : int
+        Total time of the integration.
+    number_of_readings : int
+        Number of times each numerical integrators runtime is tested.
+    delta_t_ref : float
+        Integration timestep for the reference solution.
+    G : float
+        Gravitational constant.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    plot : bool
+        If True, display the resulting plot.
+    
+    Returns
+    -------
+    mean_runtimes : dict
+        Mean runtimes for a number of iterations for each numerical integrator.
+    position_errors : dict
+        Position-error arrays for each numerical integrator.
+    """
     
     number_of_iterations_ref = int(round(total_time / delta_t_ref))
     
@@ -855,7 +1410,7 @@ def position_error_vs_computational_cost(total_time, number_of_readings, delta_t
         
         ax.set_xlabel("Runtime (s)")
         ax.set_ylabel("Position Error")
-        ax.set_title("Accuracy vs Computational Cost")
+        ax.set_title("Position Error vs Computational Cost")
         ax.grid(which = "both", alpha = 0.3)
         ax.legend()
         ax.set_xscale("log")
@@ -867,6 +1422,32 @@ def position_error_vs_computational_cost(total_time, number_of_readings, delta_t
 #position_error_vs_computational_cost(100, 1, 0.00001, G, mass_vector, position_vector, velocity_vector, plot = True)
 
 def run_animation(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+    
+    """
+    Produces an animation of an orbit using a numerical integrator.
+    
+    Parameters
+    ----------
+    method : callable
+        Numerical integration method.
+    number_of_iterations : int
+        Number of integration steps.
+    G : float
+        Gravitational constant.
+    delta_t : float
+        Integration timestep.
+    mass_vector : ndarray, shape (N,)
+        Mass of each body.
+    position_vector : ndarray, shape (N, 3)
+        Current Cartesian positions.
+    velocity_vector : ndarray, shape (N, 3)
+        Current Cartesian velocities.
+    
+    Returns
+    -------
+    animation : matplotlib.animation.FuncAnimation
+        Animation of the simulated body trajectories.
+    """
     
     trajectory = [position_vector.copy()]
 
