@@ -15,29 +15,38 @@ G = 1
 
 delta_t = 0.01
 
-#mass_vector = np.array([1.0,1.0])
+def two_body_initial_conditions():
+    
+    mass_vector = np.array([1.0,1.0])
 
-#position_vector = np.array([[0.0,1.0,0.0],
- #                           [0.0,-1.0,0.0]
-  #                          ])
+    position_vector = np.array([[0.0,1.0,0.0],
+                                [0.0,-1.0,0.0]
+                                ])
 
-#velocity_vector = np.array([[0.5,0.0,0.0],
- #                           [-0.5,0.0,0.0]
-  #                           ])
-
-mass_vector = np.array([1.0,1.0,1.0])
-
-position_vector = np.array([[-0.97000436,0.24308753,0.0],
-                            [0.97000436,-0.24308753,0.0],
-                            [0.0,0.0,0.0]
-                            ])
-
-velocity_vector = np.array([[0.466203685,0.432365730,0.0],
-                            [0.466203685,0.432365730,0.0],
-                            [-0.932407370,-0.864731460,0.0]
-                            ])
+    velocity_vector = np.array([[0.5,0.0,0.0],
+                                [-0.5,0.0,0.0]
+                                 ])
+    
+    return mass_vector, position_vector, velocity_vector
 
 
+def figure_eight_initial_conditions():
+    
+    mass_vector = np.array([1.0,1.0,1.0])
+
+    position_vector = np.array([[-0.97000436,0.24308753,0.0],
+                                [0.97000436,-0.24308753,0.0],
+                                [0.0,0.0,0.0]
+                                ])
+
+    velocity_vector = np.array([[0.466203685,0.432365730,0.0],
+                                [0.466203685,0.432365730,0.0],
+                                [-0.932407370,-0.864731460,0.0]
+                                ])
+    
+    return mass_vector, position_vector, velocity_vector
+
+mass_vector, position_vector, velocity_vector = figure_eight_initial_conditions()
 
 @njit
 def acceleration(G, mass_vector, position_vector):
@@ -54,7 +63,7 @@ def acceleration(G, mass_vector, position_vector):
     return acceleration_vector
 
 @njit
-def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+def forward_euler(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     acceleration_vector =  acceleration(G,
                                         mass_vector,
@@ -67,7 +76,7 @@ def forward_euler_method(G, delta_t, mass_vector, position_vector, velocity_vect
     return position_vector, velocity_vector
 
 @njit
-def runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+def runge_kutta_4(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     k_1_velocity = velocity_vector
     k_1_acceleration = acceleration(G,
@@ -101,7 +110,7 @@ def runge_kutta_4_method(G, delta_t, mass_vector, position_vector, velocity_vect
     return position_vector, velocity_vector
 
 @njit
-def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
+def leapfrog(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     acceleration_vector = acceleration(G,
                                        mass_vector,
@@ -121,55 +130,14 @@ def leapfrog_method(G, delta_t, mass_vector, position_vector, velocity_vector):
     
     return position_vector, velocity_vector
 
+METHOD_NAMES = {forward_euler: "Forward Euler",
+                runge_kutta_4: "Runge Kutta",
+                leapfrog: "Leapfrog"}
 
+METHOD_COLOURS = {forward_euler: "tab:blue",
+                  runge_kutta_4: "tab:orange",
+                  leapfrog: "tab:green"}
 
-def run_animation(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
-    
-    trajectory = []
-
-    for i in range(number_of_iterations):
-        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
-        trajectory.append(position_vector.copy())
-
-    trajectory = np.array(trajectory)
-
-    fig, ax = plt.subplots()
-
-    ax.set_xlim(
-        trajectory[:, :, 0].min() - 0.5,
-        trajectory[:, :, 0].max() + 0.5
-        )    
-    
-    ax.set_ylim(
-        trajectory[:, :, 1].min() - 0.5,
-        trajectory[:, :, 1].max() + 0.5
-        )
-    
-    ax.set_aspect("equal")
-
-    bodies = []
-    
-    for i in range(len(mass_vector)):
-        body, = ax.plot([], [], "o")
-        bodies.append(body)
-
-    def update(frame):
-    
-        for i in range(len(mass_vector)):
-            bodies[i].set_data(
-                [trajectory[frame, i, 0]],
-                [trajectory[frame, i, 1]]
-                )
-            
-        return bodies
-
-    animation = FuncAnimation(fig, update, frames = range(0, len(trajectory), 5), interval = 20)
-
-    plt.show()
-    
-    return animation
-
-#animation = run_animation(leapfrog_method, 10000, G, delta_t, mass_vector, position_vector, velocity_vector)
 
 @njit
 def total_energy(G, mass_vector, position_vector, velocity_vector):
@@ -192,7 +160,7 @@ def total_energy(G, mass_vector, position_vector, velocity_vector):
     return kinetic_energy + potential_energy
 
 @njit
-def total_linear_momentum(mass_vector, position_vector, velocity_vector):
+def total_linear_momentum(mass_vector, velocity_vector):
     
     linear_momentum = np.zeros(3)
     
@@ -212,6 +180,8 @@ def total_angular_momentum(mass_vector, position_vector, velocity_vector):
         angular_momentum += np.cross(position_vector[i], mass_vector[i] * velocity_vector[i])
         
     return angular_momentum
+
+
 
 @njit
 def conservation_of_energy(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
@@ -254,7 +224,7 @@ def conservation_of_energy(method, number_of_iterations, iterations_between_upda
             if abs(E_0) < 1e-12:
                 energy_error[measurement] = abs(energy - E_0)
             else:
-                energy_error[measurement] = (energy - E_0) / abs(E_0)
+                energy_error[measurement] = abs(energy - E_0) / abs(E_0)
             
             measurement += 1
         
@@ -272,7 +242,6 @@ def conservation_of_linear_momentum(method, number_of_iterations, iterations_bet
     time[0] = 0.0
     
     P_0 = total_linear_momentum(mass_vector,
-                                position_vector,
                                 velocity_vector
                                 )
     
@@ -294,7 +263,6 @@ def conservation_of_linear_momentum(method, number_of_iterations, iterations_bet
             time[measurement] = (i + 1) * delta_t
             
             linear_momentum = total_linear_momentum(mass_vector,
-                                                    position_vector,
                                                     velocity_vector
                                                     )
         
@@ -353,19 +321,18 @@ def conservation_of_angular_momentum(method, number_of_iterations, iterations_be
             
     return time, angular_momentum_error
 
-def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
+CONSERVED_QUANTITY_NAMES = {conservation_of_energy: "Energy",
+                            conservation_of_linear_momentum: "Linear Momentum",
+                            conservation_of_angular_momentum: "Angular Momentum"
+                            }
+
+ERROR_NAMES = {conservation_of_energy: "Relative Error",
+               conservation_of_linear_momentum: "Absolute Error",
+               conservation_of_angular_momentum: "Absolute Error"}
+
+def plot_conservation_comparison(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    conserved_quantity_names = {conservation_of_energy: "Energy",
-                                conservation_of_linear_momentum: "Linear Momentum",
-                                conservation_of_angular_momentum: "Angular Momentum"
-                                }
-    
-    method_names = {forward_euler_method: "Forward Euler",
-                    runge_kutta_4_method: "Runge Kutta",
-                    leapfrog_method: "Leapfrog"}
-    
-    
-    methods = [runge_kutta_4_method, leapfrog_method]
+    methods = [runge_kutta_4, leapfrog]
     
     delta_t_times = [0.05, 0.025, 0.0125]
     
@@ -375,7 +342,7 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
         for column, delta_t in enumerate(delta_t_times):
             
             number_of_iterations = int(total_time / delta_t)
-            iterations_between_updates = 1 #int(measurement_interval / delta_t)
+            iterations_between_updates = max(1, int(round(measurement_interval / delta_t)))
             
             time, conserved_quantity_error = conserved_quantity(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector)
             
@@ -389,22 +356,18 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
                 ax.set_title(f"Δt = {delta_t}")
             
             if column == 0:
-                ax.set_ylabel(f"{method_names[method]} Error")
+                ax.set_ylabel(f"{METHOD_NAMES[method]} Error")
                 
             if row == len(methods) - 1:
                 ax.set_xlabel("Time")
             
-    fig.suptitle(f"{conserved_quantity_names[conserved_quantity]} Conservation Comparison", fontsize = 16)        
+    fig.suptitle(f"{CONSERVED_QUANTITY_NAMES[conserved_quantity]} Conservation Comparison", fontsize = 16)        
     
     plt.show()
 
-#plot_graphs(conservation_of_linear_momentum, 10, 1, G, mass_vector, position_vector, velocity_vector)
+#plot_conservation_comparison(conservation_of_linear_momentum, 10, 0.01, G, mass_vector, position_vector, velocity_vector)
 
-def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
-    
-    body_colours = {0: "tab:red",
-                    1: "tab:blue",
-                    2: "tab:orange"}
+def plot_orbital_trajectories(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
     orbit = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
     orbit[0] = position_vector
@@ -422,7 +385,7 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     fig, ax = plt.subplots()    
     
     for body in range(len(mass_vector)):
-        ax.plot(orbit[:, body, 0], orbit[:, body, 1], label = f"Body {body + 1}", color = body_colours[body])
+        ax.plot(orbit[:, body, 0], orbit[:, body, 1], label = f"Body {body + 1}")
 
     ax.set_xlim(
         orbit[:, :, 0].min() - 0.5,
@@ -439,13 +402,13 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     ax.set_ylabel("y")
     ax.legend()
     ax.grid()
-    ax.set_title("Trajectories Over 10,000 Orbits")
+    ax.set_title("Orbital Trajectories")
     
     plt.show()
     
-#orbit_graph(runge_kutta_4_method, 632600, G, delta_t, mass_vector, position_vector, velocity_vector)
+#plot_orbital_trajectories(runge_kutta_4, 632600, G, delta_t, mass_vector, position_vector, velocity_vector)
     
-def distance_between_bodies(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector):
+def sum_of_pairwise_distances(method, number_of_iterations, iterations_between_updates, G, delta_t, mass_vector, position_vector, velocity_vector, plot = True):
     
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
@@ -477,37 +440,30 @@ def distance_between_bodies(method, number_of_iterations, iterations_between_upd
                     distance[measurement] += np.linalg.norm(position_vector[k] - position_vector[j])
 
             measurement += 1
+    
+    if plot:
+        
+        fig, ax = plt.subplots()
+        
+        ax.plot(time / 1000, distance, label = "Distance")
+        
+        ax.set_ylim(
+            distance[:].min() - 0.01,
+            distance[:].max() + 0.01
+            )
+        
+        ax.set_xlabel(r"Time ($10^3$ s)")
+        ax.set_ylabel("Sum of Pairwise Distances")
+        ax.legend()
+        ax.grid()
+        ax.set_title("Sum of Pairwise Distances Over Time")
+        plt.show()
+        
+    return time, distance
 
-    fig, ax = plt.subplots()
-    
-    ax.plot(time / 1000, distance, label = "Distance")
-    
-    ax.set_ylim(
-        distance[:].min() - 0.01,
-        distance[:].max() + 0.01
-        )
-    
-    #ax.set_aspect("equal")
-    ax.set_xlabel(r"Time ($10^3$ s)")
-    ax.set_ylabel("Sum of Pairwise Distances")
-    ax.legend()
-    ax.grid()
-    ax.set_title("Sum of Pairwise Distances Over Time")
-    
-    plt.show()
+#sum_of_pairwise_distances(runge_kutta_4, 6326, 100, G, delta_t, mass_vector, position_vector, velocity_vector, plot = False)
 
-#distance_between_bodies(runge_kutta_4_method, 632600, 100, G, delta_t, mass_vector, position_vector, velocity_vector)
-
-def solution_error_over_time(number_of_iterations, iterations_between_updates, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector):
-    
-    method_names = {forward_euler_method: "Forward Euler",
-                   runge_kutta_4_method: "Runge Kutta",
-                   leapfrog_method: "Leapfrog"
-                   }
-    
-    method_colours = {forward_euler_method: "tab:blue",
-                      runge_kutta_4_method: "tab:orange",
-                      leapfrog_method: "tab:green"}
+def solution_error_over_time(number_of_iterations, iterations_between_updates, G, delta_t, delta_t_ref, mass_vector, position_vector, velocity_vector, plot = True):
     
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
@@ -515,18 +471,25 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
     reference_solution[0] = position_vector
     time = np.zeros(number_of_measurements)
     
+    ratio = delta_t / delta_t_ref
+    
+    if not np.isclose(ratio, round(ratio)):
+        raise ValueError("delta_t must be an integer multiple of delta_t_ref")
+    
     steps_per_step_reference = int(round(delta_t / delta_t_ref))
     
-    methods = [runge_kutta_4_method, leapfrog_method]
+    methods = [runge_kutta_4, leapfrog]
     
     position_vector_copy = position_vector.copy()
     velocity_vector_copy = velocity_vector.copy()
     
-    fig, ax = plt.subplots()
+    if plot:
+    
+        fig, ax = plt.subplots()
     
     for i in range(number_of_iterations * steps_per_step_reference):
         
-        position_vector_copy, velocity_vector_copy = runge_kutta_4_method(G,
+        position_vector_copy, velocity_vector_copy = runge_kutta_4(G,
                                                                 delta_t_ref,
                                                                 mass_vector,
                                                                 position_vector_copy,
@@ -578,40 +541,45 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
             
             error[k] = np.sqrt(summand)
     
-        errors[method_names[method]] = error.copy()
+        errors[METHOD_NAMES[method]] = error.copy()
+        
+        if plot:
+            
+            ax.plot(time, error, label = METHOD_NAMES[method], color = METHOD_COLOURS[method])
     
-        ax.plot(time, error, label = method_names[method], color = method_colours[method])
+    if plot:
     
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Position Error")
-    ax.legend()
-    ax.grid()
-    ax.set_title("Trajectory Error Relative to Reference Solution")
-    
-    plt.show()
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Position Error")
+        ax.legend()
+        ax.grid()
+        ax.set_title("Trajectory Error Relative to Reference Solution")
+        plt.show()
 
-#solution_error_over_time(100000, 10, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector)
+    return time, errors
 
-def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
-    
-    method_names = {forward_euler_method: "Forward Euler",
-                    runge_kutta_4_method: "Runge Kutta",
-                    leapfrog_method: "Leapfrog"}
-    
+#solution_error_over_time(100, 10, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector, plot = False)
+
+def convergence_of_numerical_methods(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector, plot = True):
+
     delta_t_times = [0.1, 0.05, 0.025, 0.0125, 0.00625]
     
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    methods = [forward_euler, runge_kutta_4, leapfrog]
     
     number_of_iterations_ref = int(round(total_time / delta_t_ref))
     
     position_ref = position_vector.copy()
     velocity_ref = velocity_vector.copy()
     
-    fig, ax = plt.subplots()
+    convergence = {}
+    
+    if plot:
+        
+        fig, ax = plt.subplots()
     
     for i in range(number_of_iterations_ref):
         
-        position_ref, velocity_ref = runge_kutta_4_method(G,
+        position_ref, velocity_ref = runge_kutta_4(G,
                                                           delta_t_ref,
                                                           mass_vector,
                                                           position_ref,
@@ -649,41 +617,35 @@ def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, veloci
                     
             error = np.sqrt(summand)
             error_at_final_time.append(error)
-            slope = (np.log(error_at_final_time[-1]) - np.log(error_at_final_time[0])) / (np.log(delta_t_times[-1]) - np.log(delta_t_times[0]))
             
-        ax.plot(delta_t_times, error_at_final_time, label = f"{method_names[method]} (p = {slope:.3f})")
+        slope = (np.log(error_at_final_time[-1]) - np.log(error_at_final_time[0])) / (np.log(delta_t_times[-1]) - np.log(delta_t_times[0]))
+    
+        convergence[METHOD_NAMES[method]] = error_at_final_time
+        
+        if plot:
+            
+            ax.plot(delta_t_times, error_at_final_time, label = f"{METHOD_NAMES[method]} (p = {slope:.3f})")
+    
+    if plot:
+        
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel(r"$\Delta t$")
+        ax.set_ylabel("Error at Final Time")
+        ax.legend()
+        ax.grid()
+        ax.set_title("Convergence Error")
+        plt.show()
+        
+    return delta_t_times, convergence
 
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    
-    ax.set_xlabel(r"$\Delta t$")
-    ax.set_ylabel("Error at Final Time")
-    ax.legend()
-    ax.grid()
-    ax.set_title("Convergence Error")
-    
-    plt.show()
+#convergence_of_numerical_methods(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector, plot = False)
 
-#convergence(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector)
-
-def plot_on_same_graph(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
+def conservation_for_different_methods(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
-    conserved_quantity_names = {conservation_of_energy: "Energy",
-                                conservation_of_linear_momentum: "Linear Momentum",
-                                conservation_of_angular_momentum: "Angular Momentum"
-                                }
+    delta_t_times = [0.01, 0.05]
     
-    method_names = {forward_euler_method: "Forward Euler",
-                    runge_kutta_4_method: "Runge Kutta",
-                    leapfrog_method: "Leapfrog"}
-    
-    method_colours = {forward_euler_method: "tab:blue",
-                      runge_kutta_4_method: "tab:orange",
-                      leapfrog_method: "tab:green"}
-    
-    delta_t_times = [0.01]
-    
-    methods = [leapfrog_method, runge_kutta_4_method]
+    methods = [leapfrog, runge_kutta_4]
     
     fig, ax = plt.subplots()
     
@@ -704,63 +666,18 @@ def plot_on_same_graph(conserved_quantity, total_time, measurement_interval, G, 
                                                                 velocity_vector
                                                                 )
                 
-            ax.plot(time / 1000, abs(conserved_quantity_error), label = method_names[method], color = method_colours[method])
+            ax.plot(time / 1000, abs(conserved_quantity_error), label = f"{METHOD_NAMES[method]}, Δt = {delta_t}")
             
 
-    ax.set_title(f"Relative {conserved_quantity_names[conserved_quantity]} Error")
+    ax.set_title(f"{CONSERVED_QUANTITY_NAMES[conserved_quantity]} " f"{ERROR_NAMES[conserved_quantity]}")
     ax.set_xlabel(r"Time ($10^{3}$ s)")
     ax.set_ylabel("Relative Error")
     ax.set_yscale("log")
     ax.legend()
     ax.grid(which = "both", alpha = 0.3)
-
     plt.show()
 
-plot_on_same_graph(conservation_of_energy, 200000, delta_t, G, mass_vector, position_vector, velocity_vector)
-
-def long_term_comparison(conserved_quantity, method_1, method_2, total_time, delta_t, measurement_interval, G, mass_vector, position_vector, velocity_vector):
-    
-    conserved_quantity_names = {conservation_of_energy: "Energy",
-                                conservation_of_linear_momentum: "Linear Momentum",
-                                conservation_of_angular_momentum: "Angular Momentum"
-                                }
-    
-    method_names = {forward_euler_method: "Forward Euler",
-                   runge_kutta_4_method: "Runge Kutta",
-                   leapfrog_method: "Leapfrog"
-                   }
-
-    methods = [method_1, method_2]
-
-    fig, ax = plt.subplots()
-    
-    number_of_iterations = int(total_time / delta_t)
-    iterations_between_updates = int(round(measurement_interval / delta_t))
-    
-    for method in methods:
-        
-        time, conserved_quantity_error = conserved_quantity(method,
-                                                            number_of_iterations,
-                                                            iterations_between_updates,
-                                                            G,
-                                                            delta_t,
-                                                            mass_vector,
-                                                            position_vector,
-                                                            velocity_vector
-                                                            )
-
-        ax.plot(time, abs(conserved_quantity_error), label = method_names[method])
-        
-    ax.set_xlabel(r"Time (s)")
-    ax.set_ylabel("Absolute Relative Error")
-    ax.set_title(f"Absolute Relative {conserved_quantity_names[conserved_quantity]} Error")
-    ax.grid(which = "both", alpha = 0.3)
-    ax.legend()
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    plt.show()
-
-#long_term_comparison(conservation_of_energy,  forward_euler_method, runge_kutta_4_method, 200, delta_t, delta_t, G, mass_vector, position_vector, velocity_vector)
+conservation_for_different_methods(conservation_of_energy, 200, delta_t, G, mass_vector, position_vector, velocity_vector)
 
 def method_run_time(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
@@ -788,26 +705,23 @@ def method_run_time(method, number_of_iterations, G, delta_t, mass_vector, posit
     
     return run_time
 
-def plot_runtime(G, delta_t, mass_vector, position_vector, velocity_vector):
+def plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    method_names = {forward_euler_method: "Forward Euler",
-                    runge_kutta_4_method: "Runge Kutta",
-                    leapfrog_method: "Leapfrog"
-                    }
-    
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    methods = [forward_euler, runge_kutta_4, leapfrog]
     
     number_of_iterations_list = np.array([100, 1000, 10000, 100000, 1000000])
     
-    runtimes = np.zeros(len(number_of_iterations_list))
+    runtimes = {}
     
     fig, ax = plt.subplots()
     
     for method in methods:
         
+        runtime = np.zeros(len(number_of_iterations_list))
+        
         for i, number_of_iterations in enumerate(number_of_iterations_list):
         
-            runtimes[i] = method_run_time(method,
+            runtime[i] = method_run_time(method,
                                           number_of_iterations,
                                           G,
                                           delta_t,
@@ -816,35 +730,36 @@ def plot_runtime(G, delta_t, mass_vector, position_vector, velocity_vector):
                                           velocity_vector
                                           )
         
-        plt.plot(number_of_iterations_list / 1000, runtimes, label = method_names[method])
+        runtimes[METHOD_NAMES[method]] = runtime
+        
+        plt.plot(number_of_iterations_list / 1000, runtime, label = METHOD_NAMES[method])
 
     ax.set_xlabel(r"Number of Iterations $(10^3)$")
     ax.set_ylabel("Runtime (s)")
     ax.set_title("Computational Runtime vs Number of Iterations")
     ax.grid(which = "both", alpha = 0.3)
     ax.legend()
-    #ax.set_xscale("log")
-    #ax.set_yscale("log")
     plt.show()
 
-#plot_runtime(G, delta_t, mass_vector, position_vector, velocity_vector)
+    return number_of_iterations_list, runtimes
 
-def repeated_plot_runtime(number_of_readings, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
+#plot_runtimes(G, delta_t, mass_vector, position_vector, velocity_vector, plot = False)
+
+def runtime_statistics(number_of_readings, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    method_names = {forward_euler_method: "Forward Euler",
-                    runge_kutta_4_method: "Runge Kutta",
-                    leapfrog_method: "Leapfrog"
-                    }
+    methods = [forward_euler, runge_kutta_4, leapfrog]
     
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    means = {}
+    
+    standard_deviations = {}
     
     for method in methods:
         
-        runtimes = np.zeros(number_of_readings)
+        runtime = np.zeros(number_of_readings)
         
         for j in range(number_of_readings):
             
-            runtimes[j] = method_run_time(method,
+            runtime[j] = method_run_time(method,
                                           number_of_iterations,
                                           G,
                                           delta_t,
@@ -853,37 +768,36 @@ def repeated_plot_runtime(number_of_readings, number_of_iterations, G, delta_t, 
                                           velocity_vector
                                           )
 
-        mean = np.mean(runtimes)
+        mean = np.mean(runtime)
+        means[METHOD_NAMES[method]] = mean
+        
+        standard_deviation = np.std(runtime, ddof = 1)
+        standard_deviations[METHOD_NAMES[method]] = standard_deviation
 
-        standard_deviation = np.std(runtimes, ddof = 1)
+    return means, standard_deviations
 
-        print(f"{method_names[method]}: {mean} ± {standard_deviation} s")
-
-#repeated_plot_runtime(5, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
+#runtime_statistics(5, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
     
-def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
-    
-    method_names = {forward_euler_method: "Forward Euler",
-                   runge_kutta_4_method: "Runge Kutta",
-                   leapfrog_method: "Leapfrog"
-                   }
+def position_error_vs_computational_cost(total_time, number_of_readings, delta_t_ref, G, mass_vector, position_vector, velocity_vector, plot = True):
     
     number_of_iterations_ref = int(round(total_time / delta_t_ref))
     
-    reference_solution = np.zeros((number_of_iterations_ref, len(mass_vector), 3))
-    reference_solution[0] = position_vector
-    
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    methods = [forward_euler, runge_kutta_4, leapfrog]
     delta_t_times = [0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125]
     
     position_vector_ref = position_vector.copy()
     velocity_vector_ref = velocity_vector.copy()
     
-    fig, ax = plt.subplots()
+    mean_runtimes = {}
+    position_errors = {}
+    
+    if plot:
+        
+        fig, ax = plt.subplots()
     
     for i in range(number_of_iterations_ref):
         
-        position_vector_ref, velocity_vector_ref = runge_kutta_4_method(G,
+        position_vector_ref, velocity_vector_ref = runge_kutta_4(G,
                                                                 delta_t_ref,
                                                                 mass_vector,
                                                                 position_vector_ref,
@@ -894,8 +808,8 @@ def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
         
     for method in methods:
         
-        position_errors = np.zeros(len(delta_t_times))
-        mean_runtimes = np.zeros(len(delta_t_times))
+        position_error = np.zeros(len(delta_t_times))
+        mean_runtime = np.zeros(len(delta_t_times))
         
         for i, delta_t in enumerate(delta_t_times):
             
@@ -917,7 +831,7 @@ def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
                                               velocity_vector
                                               )
             
-            mean_runtimes[i] = np.mean(runtimes)
+            mean_runtime[i] = np.mean(runtimes)
     
             for j in range(number_of_iterations):
                 
@@ -928,20 +842,76 @@ def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
                                                                     velocity_vector_copy
                                                                     )
             
-            position_errors[i] = np.linalg.norm(position_vector_ref - position_vector_copy)
+            position_error[i] = np.linalg.norm(position_vector_ref - position_vector_copy)
+        
+        mean_runtimes[METHOD_NAMES[method]] = mean_runtime
+        position_errors[METHOD_NAMES[method]] = position_error
+        
+        if plot:
     
-        print(method_names[method], mean_runtimes, position_errors, delta_t_times)
+            ax.plot(mean_runtime, position_error, label = METHOD_NAMES[method])
     
-        ax.plot(mean_runtimes, position_errors, label = method_names[method])
+    if plot:
+        
+        ax.set_xlabel("Runtime (s)")
+        ax.set_ylabel("Position Error")
+        ax.set_title("Accuracy vs Computational Cost")
+        ax.grid(which = "both", alpha = 0.3)
+        ax.legend()
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        plt.show()
+        
+    return mean_runtimes, position_errors
+
+#position_error_vs_computational_cost(100, 1, 0.00001, G, mass_vector, position_vector, velocity_vector, plot = True)
+
+def run_animation(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
-    ax.set_xlabel("Runtime (s)")
-    ax.set_ylabel("Position Error")
-    ax.set_title("Accuracy vs Computational Cost")
-    ax.grid(which = "both", alpha = 0.3)
-    ax.legend()
-    ax.set_xscale("log")
-    ax.set_yscale("log")
+    trajectory = [position_vector.copy()]
+
+    for i in range(number_of_iterations):
+        
+        position_vector, velocity_vector = method(G, delta_t, mass_vector, position_vector, velocity_vector)
+        
+        trajectory.append(position_vector.copy())
+
+    trajectory = np.array(trajectory)
+
+    fig, ax = plt.subplots()
+
+    ax.set_xlim(
+        trajectory[:, :, 0].min() - 0.5,
+        trajectory[:, :, 0].max() + 0.5
+        )    
+    
+    ax.set_ylim(
+        trajectory[:, :, 1].min() - 0.5,
+        trajectory[:, :, 1].max() + 0.5
+        )
+    
+    ax.set_aspect("equal")
+
+    bodies = []
+    
+    for i in range(len(mass_vector)):
+        body, = ax.plot([], [], "o")
+        bodies.append(body)
+
+    def update(frame):
+    
+        for i in range(len(mass_vector)):
+            bodies[i].set_data(
+                [trajectory[frame, i, 0]],
+                [trajectory[frame, i, 1]]
+                )
+            
+        return bodies
+
+    animation = FuncAnimation(fig, update, frames = range(0, len(trajectory), 5), interval = 20)
+
     plt.show()
     
-#accuracy_vs_computational_cost(100, 100, 0.00001)
+    return animation
 
+#animation = run_animation(leapfrog, 10000, G, delta_t, mass_vector, position_vector, velocity_vector)
