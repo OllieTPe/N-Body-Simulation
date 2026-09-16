@@ -364,6 +364,7 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
                     runge_kutta_4_method: "Runge Kutta",
                     leapfrog_method: "Leapfrog"}
     
+    
     methods = [runge_kutta_4_method, leapfrog_method]
     
     delta_t_times = [0.05, 0.025, 0.0125]
@@ -401,6 +402,10 @@ def plot_graphs(conserved_quantity, total_time, measurement_interval, G, mass_ve
 
 def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_vector, velocity_vector):
     
+    body_colours = {0: "tab:red",
+                    1: "tab:blue",
+                    2: "tab:orange"}
+    
     orbit = np.zeros((number_of_iterations + 1, len(mass_vector), 3))
     orbit[0] = position_vector
     
@@ -417,7 +422,7 @@ def orbit_graph(method, number_of_iterations, G, delta_t, mass_vector, position_
     fig, ax = plt.subplots()    
     
     for body in range(len(mass_vector)):
-        ax.plot(orbit[:, body, 0], orbit[:, body, 1], label = f"Body {body + 1}")
+        ax.plot(orbit[:, body, 0], orbit[:, body, 1], label = f"Body {body + 1}", color = body_colours[body])
 
     ax.set_xlim(
         orbit[:, :, 0].min() - 0.5,
@@ -478,12 +483,12 @@ def distance_between_bodies(method, number_of_iterations, iterations_between_upd
     ax.plot(time / 1000, distance, label = "Distance")
     
     ax.set_ylim(
-        distance[:].min() - 0.02,
-        distance[:].max() + 0.02
+        distance[:].min() - 0.01,
+        distance[:].max() + 0.01
         )
     
     #ax.set_aspect("equal")
-    ax.set_xlabel("Time (1000s)")
+    ax.set_xlabel(r"Time ($10^3$ s)")
     ax.set_ylabel("Sum of Pairwise Distances")
     ax.legend()
     ax.grid()
@@ -500,6 +505,10 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
                    leapfrog_method: "Leapfrog"
                    }
     
+    method_colours = {forward_euler_method: "tab:blue",
+                      runge_kutta_4_method: "tab:orange",
+                      leapfrog_method: "tab:green"}
+    
     number_of_measurements = number_of_iterations // iterations_between_updates + 1
     
     reference_solution = np.zeros((number_of_measurements, len(mass_vector), 3))
@@ -508,7 +517,7 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
     
     steps_per_step_reference = int(round(delta_t / delta_t_ref))
     
-    methods = [forward_euler_method, runge_kutta_4_method, leapfrog_method]
+    methods = [runge_kutta_4_method, leapfrog_method]
     
     position_vector_copy = position_vector.copy()
     velocity_vector_copy = velocity_vector.copy()
@@ -571,7 +580,7 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
     
         errors[method_names[method]] = error.copy()
     
-        ax.plot(time, error, label = method_names[method])
+        ax.plot(time, error, label = method_names[method], color = method_colours[method])
     
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Position Error")
@@ -581,7 +590,7 @@ def solution_error_over_time(number_of_iterations, iterations_between_updates, G
     
     plt.show()
 
-#solution_error_over_time(1000, 1, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector)
+#solution_error_over_time(100000, 10, G, delta_t, 0.0001, mass_vector, position_vector, velocity_vector)
 
 def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, velocity_vector):
     
@@ -657,7 +666,7 @@ def convergence(total_time, G, delta_t_ref, mass_vector, position_vector, veloci
 
 #convergence(0.1, G, 0.00000001, mass_vector, position_vector, velocity_vector)
 
-def plot_on_same_graph(conserved_quantity, method, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
+def plot_on_same_graph(conserved_quantity, total_time, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
     conserved_quantity_names = {conservation_of_energy: "Energy",
                                 conservation_of_linear_momentum: "Linear Momentum",
@@ -668,37 +677,46 @@ def plot_on_same_graph(conserved_quantity, method, total_time, measurement_inter
                     runge_kutta_4_method: "Runge Kutta",
                     leapfrog_method: "Leapfrog"}
     
-    delta_t_times = [0.05, 0.025, 0.0125, 0.00625, 0.003125]
+    method_colours = {forward_euler_method: "tab:blue",
+                      runge_kutta_4_method: "tab:orange",
+                      leapfrog_method: "tab:green"}
+    
+    delta_t_times = [0.01]
+    
+    methods = [leapfrog_method, runge_kutta_4_method]
     
     fig, ax = plt.subplots()
     
-    for delta_t in delta_t_times:
+    for method in methods:
         
-        number_of_iterations = int(total_time / delta_t)
-        iterations_between_updates = max(1, int(round(measurement_interval / delta_t)))
-        
-        time, conserved_quantity_error = conserved_quantity(method,
-                                                            number_of_iterations,
-                                                            iterations_between_updates,
-                                                            G,
-                                                            delta_t,
-                                                            mass_vector,
-                                                            position_vector,
-                                                            velocity_vector
-                                                            )
+        for delta_t in delta_t_times:
             
-        ax.plot(time, abs(conserved_quantity_error), label = f"Δt = {delta_t}")
-        ax.set_yscale("log")
+            number_of_iterations = int(total_time / delta_t)
+            iterations_between_updates = max(1, int(round(measurement_interval / delta_t)))
+            
+            time, conserved_quantity_error = conserved_quantity(method,
+                                                                number_of_iterations,
+                                                                iterations_between_updates,
+                                                                G,
+                                                                delta_t,
+                                                                mass_vector,
+                                                                position_vector,
+                                                                velocity_vector
+                                                                )
+                
+            ax.plot(time / 1000, abs(conserved_quantity_error), label = method_names[method], color = method_colours[method])
+            
 
-    ax.set_title(f"Conservation of {conserved_quantity_names[conserved_quantity]} Using The {method_names[method]} Method")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Absolute Relative Error")
+    ax.set_title(f"Relative {conserved_quantity_names[conserved_quantity]} Error")
+    ax.set_xlabel(r"Time ($10^{3}$ s)")
+    ax.set_ylabel("Relative Error")
+    ax.set_yscale("log")
     ax.legend()
     ax.grid(which = "both", alpha = 0.3)
 
     plt.show()
 
-#plot_on_same_graph(conservation_of_energy, forward_euler_method, 50, delta_t, G, mass_vector, position_vector, velocity_vector)
+plot_on_same_graph(conservation_of_energy, 200000, delta_t, G, mass_vector, position_vector, velocity_vector)
 
 def long_term_comparison(conserved_quantity, method_1, method_2, total_time, delta_t, measurement_interval, G, mass_vector, position_vector, velocity_vector):
     
@@ -839,9 +857,9 @@ def repeated_plot_runtime(number_of_readings, number_of_iterations, G, delta_t, 
 
         standard_deviation = np.std(runtimes, ddof = 1)
 
-        print(f"{method_names[method]}: {mean:.3f} ± {standard_deviation:.3f} s")
+        print(f"{method_names[method]}: {mean} ± {standard_deviation} s")
 
-#repeated_plot_runtime(20, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
+#repeated_plot_runtime(5, 1000000, G, delta_t, mass_vector, position_vector, velocity_vector)
     
 def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
     
@@ -912,6 +930,8 @@ def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
             
             position_errors[i] = np.linalg.norm(position_vector_ref - position_vector_copy)
     
+        print(method_names[method], mean_runtimes, position_errors, delta_t_times)
+    
         ax.plot(mean_runtimes, position_errors, label = method_names[method])
     
     ax.set_xlabel("Runtime (s)")
@@ -923,14 +943,5 @@ def accuracy_vs_computational_cost(total_time, number_of_readings, delta_t_ref):
     ax.set_yscale("log")
     plt.show()
     
-#accuracy_vs_computational_cost(1, 5, 0.00001)
-    
-    
-    
-    
-    
-    
-    
-    
-    
+#accuracy_vs_computational_cost(100, 100, 0.00001)
 
