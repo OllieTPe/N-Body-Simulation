@@ -2,6 +2,10 @@
 
 Numerical simulation of a Newtonian N-body gravitational system.
 
+## Report
+
+A detailed write-up of the numerical methods, results and analysis is available in the [project report](N_body_Simulation.pdf).
+
 ## Overview
 
 This project simulates the orbital trajectories of a closed Newtonian N-body gravitational system using the Forward Euler, Kick-Drift-Kick Leapfrog, and fourth-order Runge-Kutta (RK4) methods.
